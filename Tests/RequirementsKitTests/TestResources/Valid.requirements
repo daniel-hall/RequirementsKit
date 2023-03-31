@@ -1,0 +1,129 @@
+// Auth stuff
+#1.1 (labelOne, labelTwo)
+Requirement: The user can log in with a valid username and password
+
+  #1.1.1 (labelThree)
+  Example: Valid username and password
+
+    If:
+    - the user is on the log in screen
+    - the user has entered a valid username and password
+      | username: Snaffle |
+      | password: guest   |
+
+    When: the user taps the submit button
+
+    Expect: the user should arrive on the home screen with expected elements visible
+      | logOutButton   |
+      | accountTab     |
+      | settingsButton |
+
+  #1.1.2 (labelFour)
+  Example: Valid username with invalid password
+
+    If:
+    - the user is on the log in screen
+
+    // Less than 8 characters is invalid
+    - the user has entered an INVALID username and password
+      | username: Snaffle |
+      | password: admin   |
+
+    When: the user taps the submit button
+
+    Expect:
+    - the user should still be on the login screen
+    - an error should be displayed
+      ```
+      Error
+      Invalid Username or password
+      ```
+
+#1.2 (labelFive, labelSix)
+Requirement: The user can log out
+
+  If: the user is on the <screen-name> screen
+
+  When: the user taps the log out button
+
+  Expect:
+  - the user should arrive on the login screen
+  - the user should not be on the <screen-name> screen
+
+  Examples:
+
+                 |                              | screen-name |
+                 | ---------------------------- | ----------- |
+    #1.2.1       | Log out from home screen     | home        |
+
+    // Account screen not supported on Android yet
+    #1.2.2 (ios) | Log out from account screen  | account     |
+    #1.2.3       | Log out from settings screen | settings    |
+
+// Notification Stuff
+#1.3
+Requirement: Welcome notifications display correctly
+
+  // No premium subscription requirements defined yet
+  #1.3.1 (basic)
+  Example: Basic subscription
+
+    If: the notification payloads are
+      |        | title             | body                                |
+      | ------ | ----------------- | ----------------------------------- |
+      | first  | Welcome           | Thanks for subscribing, Pat!        |
+      | second | Let's get started | Tap here to set up your preferences |
+
+    When: the notifications are received
+      | first  |
+      | second |
+
+    Expect:
+    - two notification banners are on the lock screen
+      | title             | body                                |
+      | ----------------- | ----------------------------------- |
+      | Welcome           | Thanks for subscribing, Pat!        |
+      | Let's get started | Tap here to set up your preferences |
+
+    - the application icon has a badge
+
+#1.4
+Requirement: If the user isn't logged in, certain buttons should be disabled
+
+  Example: User can't proceed past splash screen
+
+    If:
+    - The user is not logged in
+    - The user is on the splash screen
+
+    Expect: The proceed button is disabled
+
+  Example Set: If the user isn't logged in on the <screen-name> screen, disable the <button-name> button
+
+    If:
+    - The user is not logged in
+    - The user is on the <screen-name> screen
+
+    Expect: The <button-name> button should be disabled
+
+    Examples:
+
+      | screen-name   | button-name |
+      | ------------- | ----------- |
+      | home          | settings    |
+      | home          | account     |
+      | notifications | more        |
+
+  Example: User is already on the Settings screen and logged out automatically
+
+    If:
+    - The user is logged in
+    - The user is on the settings screen
+
+    When:
+    - The app is backgrounded
+    - The user is logged out in the background
+    - The app is foregrounded
+
+    Expect: The user should be on the log in screen
+
