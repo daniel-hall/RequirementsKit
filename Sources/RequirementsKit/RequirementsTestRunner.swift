@@ -55,13 +55,14 @@ class RequirementsTestRunner: NSObject, XCTestObservation {
         }
     }
 
-    func run(timeout: TimeInterval = 180, continueAfterFailure: Bool = false, beforeEachExample: (Requirement.Example) -> Void) {
+    func run(timeout: TimeInterval = 180, continueAfterFailure: Bool = false, beforeEachExample: ((Requirement.Example) -> Void)? = nil) {
         guard Self.current == nil else { fatalError("Can't start running a RequirementsTestRunner when there is already one running") }
         Self.current = self
 
         self.timeout = timeout
         self.hasFailed = false
         self.continueAfterFailure = true
+        self.beforeEachExample = beforeEachExample
 
         XCTestObservationCenter.shared.addTestObserver(self)
 
@@ -80,14 +81,21 @@ class RequirementsTestRunner: NSObject, XCTestObservation {
                                 }
                             }
                             XCTContext.runActivity(named: example.activity(syntax: file.syntax)) { _ in
+                                self.beforeEachExample?(example)
                                 for statement in example.statements {
                                     guard !self.hasFailed || continueAfterFailure else { break }
                                     XCTContext.runActivity(named: statement.activity(syntax: file.syntax)) { _ in
                                         let matches = self.statementHandlers.filter { $0.type == statement.type && $0.getMatch(statement) != nil }
                                         if matches.isEmpty {
                                             XCTFail("No StatementHandler provided for the statement '\(statement.activity(syntax: file.syntax))'")
+                                            if !continueAfterFailure {
+                                                hasFailed = true
+                                            }
                                         } else if matches.count > 1 {
                                             XCTFail("Multiple matching StatementHandlers provided for the statement '\(statement.activity(syntax: file.syntax))'")
+                                            if !continueAfterFailure {
+                                                hasFailed = true
+                                            }
                                         } else {
                                             do {
                                                 let timeoutWorkItem = DispatchWorkItem {
@@ -99,6 +107,9 @@ class RequirementsTestRunner: NSObject, XCTestObservation {
                                                 try matches.first?.action(matches.first?.getMatch(statement))
                                             } catch {
                                                 XCTFail(error.localizedDescription)
+                                                if !continueAfterFailure {
+                                                    hasFailed = true
+                                                }
                                             }
                                         }
                                     }

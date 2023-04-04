@@ -182,12 +182,12 @@ private let parseStatementKeyword = Parser<(Requirement.Example.StatementType, S
     switch trimmed.prefix(upTo: trimmed.firstIndex(of: " ") ?? trimmed.startIndex) {
     case "Given":
         type = .if
-            case "When":
-                    type = .when
-                case "Then":
-                    type = .expect
-                default:
-                    throw "No Given, When, or Then keyword found"
+    case "When":
+        type = .when
+    case "Then":
+        type = .expect
+    default:
+        throw "No Given, When, or Then keyword found"
     }
     let description = trimmed.drop { $0 != " " }.dropFirst().trimmingCharacters(in: .whitespaces)
     guard !description.isEmpty else {
