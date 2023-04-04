@@ -28,7 +28,7 @@ import XCTest
 
 public extension XCTestCase {
 
-    func testRequirements(from file: File, statementHandlers: [StatementHandler], matching: LabelExpression? = nil, continueAfterFailure: Bool = false, timeout: TimeInterval = 180, beforeEachExample: @escaping (Requirement.Example) -> Void) {
+    func testRequirements(from file: File, statementHandlers: [StatementHandler], matching: LabelExpression? = nil, continueAfterFailure: Bool = false, timeout: TimeInterval = 180, beforeEachExample: ((Requirement.Example) -> Void)? = nil) {
         let runner = RequirementsTestRunner(file: file, statementHandlers: statementHandlers, matching: matching)
         if Thread.isMainThread {
             runner.run(timeout: timeout, continueAfterFailure: continueAfterFailure, beforeEachExample: beforeEachExample)
@@ -39,12 +39,12 @@ public extension XCTestCase {
         }
     }
 
-    func testRequirements(from url: URL, statementHandlers: [StatementHandler], matching: LabelExpression? = nil, continueAfterFailure: Bool = false, timeout: TimeInterval = 180, beforeEachExample: @escaping (Requirement.Example) -> Void) throws {
+    func testRequirements(from url: URL, statementHandlers: [StatementHandler], matching: LabelExpression? = nil, continueAfterFailure: Bool = false, timeout: TimeInterval = 180, beforeEachExample: ((Requirement.Example) -> Void)? = nil) throws {
         let file = try File.parseFrom(url: url)
-        testRequirements(from: file, statementHandlers: statementHandlers, beforeEachExample: beforeEachExample)
+        testRequirements(from: file, statementHandlers: statementHandlers, matching: matching, continueAfterFailure: continueAfterFailure, timeout: timeout, beforeEachExample: beforeEachExample)
     }
 
-    func testRequirements(from urls: [URL], statementHandlers: [StatementHandler], matching: LabelExpression? = nil, continueAfterFailure: Bool = false, timeout: TimeInterval = 180, beforeEachExample: @escaping (Requirement.Example) -> Void) throws {
+    func testRequirements(from urls: [URL], statementHandlers: [StatementHandler], matching: LabelExpression? = nil, continueAfterFailure: Bool = false, timeout: TimeInterval = 180, beforeEachExample: ((Requirement.Example) -> Void)? = nil) throws {
         let files = try urls.map { try File.parseFrom(url: $0) }
         let runner = RequirementsTestRunner(files: files, statementHandlers: statementHandlers, matching: matching)
         if Thread.isMainThread {
@@ -56,7 +56,7 @@ public extension XCTestCase {
         }
     }
 
-    func testRequirements(in directory: String?, recursively: Bool = true, statementHandlers: [StatementHandler], matching: LabelExpression? = nil, continueAfterFailure: Bool = false, timeout: TimeInterval = 180, beforeEachExample: @escaping (Requirement.Example) -> Void) throws {
+    func testRequirements(in directory: String? = nil, recursively: Bool = true, statementHandlers: [StatementHandler], matching: LabelExpression? = nil, continueAfterFailure: Bool = false, timeout: TimeInterval = 180, beforeEachExample:  ((Requirement.Example) -> Void)? = nil) throws {
         let bundle = Bundle(for: type(of: self))
         let subdirectoryPath = directory.map { "/\($0)" } ?? ""
         let urls: [URL]
@@ -78,7 +78,7 @@ public extension XCTestCase {
             }
             urls = recursiveURLs
         }
-        try testRequirements(from: urls, statementHandlers: statementHandlers, beforeEachExample: beforeEachExample)
+        try testRequirements(from: urls, statementHandlers: statementHandlers, matching: matching, continueAfterFailure: continueAfterFailure, timeout: timeout, beforeEachExample: beforeEachExample)
     }
 }
 
