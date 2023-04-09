@@ -26,27 +26,21 @@
 import XCTest
 
 
-class RequirementsTestRunner: NSObject, XCTestObservation {
-    private static var current: RequirementsTestRunner?
-    public var timeout: TimeInterval = 180
-    public var files: [File]
+class RequirementTestRunner: NSObject, XCTestObservation {
+    public var file: File
+    public var requirement: Requirement
     public var hasFailed = false
     public var continueAfterFailure = false
-    public let labels: LabelExpression?
+    public let matchLabels: LabelExpression?
     private let statementHandlers: [StatementHandler]
     private var beforeEachExample: ((Requirement.Example) -> Void)?
     private var timeoutDispatchWorkItem: DispatchWorkItem?
 
-    init(file: File, statementHandlers: [StatementHandler], matching: LabelExpression? = nil) {
-        self.files = [file]
+    init(file: File, requirement: Requirement, statementHandlers: [StatementHandler], matchLabels: LabelExpression? = nil) {
+        self.file = file
+        self.requirement = requirement
         self.statementHandlers = statementHandlers
-        self.labels = matching
-    }
-
-    init(files: [File], statementHandlers: [StatementHandler], matching: LabelExpression? = nil) {
-        self.files = files
-        self.statementHandlers = statementHandlers
-        self.labels = matching
+        self.matchLabels = matchLabels
     }
 
     func testCase(_ testCase: XCTestCase, didFailWithDescription description: String, inFile filePath: String?, atLine lineNumber: Int) {
@@ -56,63 +50,48 @@ class RequirementsTestRunner: NSObject, XCTestObservation {
     }
 
     func run(timeout: TimeInterval = 180, continueAfterFailure: Bool = false, beforeEachExample: ((Requirement.Example) -> Void)? = nil) {
-        guard Self.current == nil else { fatalError("Can't start running a RequirementsTestRunner when there is already one running") }
-        Self.current = self
-
-        self.timeout = timeout
         self.hasFailed = false
         self.continueAfterFailure = true
         self.beforeEachExample = beforeEachExample
 
         XCTestObservationCenter.shared.addTestObserver(self)
-
-        files.forEach {
-            let file = $0
-            XCTContext.runActivity(named: file.activity) { _ in
-                for requirement in file.requirements {
+        for example in requirement.examples {
+            guard !self.hasFailed || continueAfterFailure else { break }
+            if let matchLabels {
+                if !matchLabels.matches(example.labels) {
+                    XCTContext.runActivity(named: "[SKIPPED] " + example.activity(syntax: file.syntax)) { _ in }
+                    continue
+                }
+            }
+            XCTContext.runActivity(named: "💡 " + example.activity(syntax: file.syntax)) { _ in
+                self.beforeEachExample?(example)
+                for statement in example.statements {
                     guard !self.hasFailed || continueAfterFailure else { break }
-                    XCTContext.runActivity(named: requirement.activity(syntax: file.syntax)) { _ in
-                        for example in requirement.examples {
-                            guard !self.hasFailed || continueAfterFailure else { break }
-                            if let labels {
-                                if !labels.matches(example.labels) {
-                                    XCTContext.runActivity(named: "[SKIPPED] " + example.activity(syntax: file.syntax)) { _ in }
-                                    continue
-                                }
+                    XCTContext.runActivity(named: "❇️ " + statement.activity(syntax: file.syntax)) { _ in
+                        let matches = self.statementHandlers.filter { $0.type == statement.type && $0.getMatch(statement) != nil }
+                        if matches.isEmpty {
+                            XCTFail("No StatementHandler provided for the statement '\(statement.activity(syntax: file.syntax))'")
+                            if !continueAfterFailure {
+                                hasFailed = true
                             }
-                            XCTContext.runActivity(named: example.activity(syntax: file.syntax)) { _ in
-                                self.beforeEachExample?(example)
-                                for statement in example.statements {
-                                    guard !self.hasFailed || continueAfterFailure else { break }
-                                    XCTContext.runActivity(named: statement.activity(syntax: file.syntax)) { _ in
-                                        let matches = self.statementHandlers.filter { $0.type == statement.type && $0.getMatch(statement) != nil }
-                                        if matches.isEmpty {
-                                            XCTFail("No StatementHandler provided for the statement '\(statement.activity(syntax: file.syntax))'")
-                                            if !continueAfterFailure {
-                                                hasFailed = true
-                                            }
-                                        } else if matches.count > 1 {
-                                            XCTFail("Multiple matching StatementHandlers provided for the statement '\(statement.activity(syntax: file.syntax))'")
-                                            if !continueAfterFailure {
-                                                hasFailed = true
-                                            }
-                                        } else {
-                                            do {
-                                                let timeoutWorkItem = DispatchWorkItem {
-                                                    XCTFail("Statement timed out after \(matches.first?.timeout ?? self.timeout) seconds")
-                                                }
-                                                self.timeoutDispatchWorkItem?.cancel()
-                                                self.timeoutDispatchWorkItem = timeoutWorkItem
-                                                DispatchQueue.global().asyncAfter(deadline: .now() + (matches.first?.timeout ?? self.timeout), execute: timeoutWorkItem)
-                                                try matches.first?.action(matches.first?.getMatch(statement))
-                                            } catch {
-                                                XCTFail(error.localizedDescription)
-                                                if !continueAfterFailure {
-                                                    hasFailed = true
-                                                }
-                                            }
-                                        }
-                                    }
+                        } else if matches.count > 1 {
+                            XCTFail("Multiple matching StatementHandlers provided for the statement '\(statement.activity(syntax: file.syntax))'")
+                            if !continueAfterFailure {
+                                hasFailed = true
+                            }
+                        } else {
+                            do {
+                                let timeoutWorkItem = DispatchWorkItem {
+                                    XCTFail("Statement timed out after \(matches.first?.timeout ?? timeout) seconds")
+                                }
+                                self.timeoutDispatchWorkItem?.cancel()
+                                self.timeoutDispatchWorkItem = timeoutWorkItem
+                                DispatchQueue.global().asyncAfter(deadline: .now() + (matches.first?.timeout ?? timeout), execute: timeoutWorkItem)
+                                try matches.first?.action(matches.first?.getMatch(statement))
+                            } catch {
+                                XCTFail(error.localizedDescription)
+                                if !continueAfterFailure {
+                                    hasFailed = true
                                 }
                             }
                         }
