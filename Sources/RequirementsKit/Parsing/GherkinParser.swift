@@ -55,9 +55,9 @@ private let parseFeature = parseOptionalCommentsAndTags
     .flattened()
     .map { commentsAndTags, description, rules in
         let rules = rules.map { rule in
-            let combinedRuleLabels = commentsAndTags?.tags.combinedWith(rule.labels)
+            let combinedRuleLabels = commentsAndTags?.tags.combinedWith(rule.labels) ?? rule.labels
             let examples = rule.examples.map { example in
-                let combinedExampleLabels = combinedRuleLabels.combinedWith(example.labels)
+                let combinedExampleLabels = combinedRuleLabels.combinedWith(example.labels) ?? example.labels
                 return Requirement.Example(comments: example.comments, identifier: example.identifier, labels: combinedExampleLabels, explicitLabels: example.labels, description: example.description, statements: example.statements)
             }
             return Requirement(comments: rule.comments, identifier: rule.identifier, labels: combinedRuleLabels, explicitLabels: rule.labels, description: rule.description, examples: examples)
@@ -72,7 +72,7 @@ private let parseFeature = parseOptionalCommentsAndTags
             .flattened()
             .map { commentsAndTags, description, examples in
                 let examples = examples.map { example in
-                    let combinedLabels = commentsAndTags?.tags.combinedWith(example.labels)
+                    let combinedLabels = commentsAndTags?.tags.combinedWith(example.labels) ?? example.labels
                     return Requirement.Example(comments: example.comments, identifier: example.identifier, labels: combinedLabels, explicitLabels: example.labels, description: example.description, statements: example.statements)
                 }
                 let requirement = Requirement(comments: nil, identifier: nil, labels: commentsAndTags?.tags, description: description, examples: examples)
@@ -87,7 +87,7 @@ private let parseRule = parseOptionalCommentsAndTags
     .flattened()
     .map { commentsAndTags, description, examples in
         let examples = examples.map { example in
-            let combinedLabels = commentsAndTags?.tags.combinedWith(example.labels)
+            let combinedLabels = commentsAndTags?.tags.combinedWith(example.labels) ?? example.labels
             return Requirement.Example(comments: example.comments, identifier: example.identifier, labels: combinedLabels, explicitLabels: example.labels, description: example.description, statements: example.statements)
         }
         return Requirement(comments: commentsAndTags?.comments, identifier: nil, labels: commentsAndTags?.tags, description: description, examples: examples)
@@ -106,7 +106,7 @@ private let parseOptionalComments: Parser<[String]?> = Parser.zeroOrMore(parseCo
 
 private let parseTags = Parser<[String]> {
     let trimmed = $0.trimmingCharacters(in: .whitespaces)
-    let tags = trimmed.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
+    let tags = trimmed.split(separator: " ").map { $0.trimmingCharacters(in: .whitespaces) }
     guard tags.reduce(true, { $0 && $1.first == "@" && !$1.dropFirst().trimmingCharacters(in: .whitespaces).isEmpty ? true : false }) else {
         throw "Tags must all be prefixed with @"
     }

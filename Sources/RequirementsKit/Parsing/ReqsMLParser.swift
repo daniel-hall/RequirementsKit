@@ -56,14 +56,14 @@ private let parseRequirement = parseOptionalCommentsAndMetadata.then(parseRequir
     guard example.description?.tokens.isEmpty != false && example.statements.reduce(Set<String>(), { $0.union($1.tokens) }).isEmpty else {
         throw "A single example requirement shouldn't have template tokens without an Examples: table"
     }
-    let combinedLabels = commentsAndMetadata?.metadata?.labels.combinedWith(example.labels)
+    let combinedLabels = commentsAndMetadata?.metadata?.labels.combinedWith(example.labels) ?? example.labels
     let example = Requirement.Example(comments: example.comments, identifier: example.identifier, labels: combinedLabels, explicitLabels: example.labels, description: example.description, statements: example.statements)
     return Requirement(comments: commentsAndMetadata?.comments, identifier: commentsAndMetadata?.metadata?.identifier, labels: commentsAndMetadata?.metadata?.labels, description: description, examples: [example])
 }
     .or (
         parseOptionalCommentsAndMetadata.then(parseRequirementDescription).then(parseExamples).flattened().map { commentsAndMetadata, description, examples in
             let examples = examples.map { example in
-                let combinedLabels = commentsAndMetadata?.metadata?.labels.combinedWith(example.labels)
+                let combinedLabels = commentsAndMetadata?.metadata?.labels.combinedWith(example.labels) ?? example.labels
                 return Requirement.Example(comments: example.comments, identifier: example.identifier, labels: combinedLabels, explicitLabels: example.labels, description: example.description, statements: example.statements, exampleSet: example.exampleSet, specification: example.specification)
             }
             return Requirement(comments: commentsAndMetadata?.comments, identifier: commentsAndMetadata?.metadata?.identifier, labels: commentsAndMetadata?.metadata?.labels, description: description, examples: examples)
@@ -71,7 +71,7 @@ private let parseRequirement = parseOptionalCommentsAndMetadata.then(parseRequir
     ).or (
         parseOptionalCommentsAndMetadata.then(parseRequirementDescription).then(parseExampleTemplate).flattened().map { commentsAndMetadata, description, examples in
             let examples = examples.map { example in
-                let combinedLabels = commentsAndMetadata?.metadata?.labels.combinedWith(example.labels)
+                let combinedLabels = commentsAndMetadata?.metadata?.labels.combinedWith(example.labels) ?? example.labels
                 return Requirement.Example(comments: example.comments, identifier: example.identifier, labels: combinedLabels, explicitLabels: example.labels, description: example.description, statements: example.statements, exampleSet: example.exampleSet, specification: example.specification)
             }
             return Requirement(comments: commentsAndMetadata?.comments, identifier: commentsAndMetadata?.metadata?.identifier, labels: commentsAndMetadata?.metadata?.labels, description: description, examples: examples)
