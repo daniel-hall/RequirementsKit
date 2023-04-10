@@ -90,8 +90,11 @@ private extension String {
     func cleanedUp() -> String {
         let firstLine = String(self.split(separator: "\n").first ?? "")
         let camelCased = firstLine.split(separator: " ").map { String($0.first ?? Character("")).capitalized + $0.dropFirst() }.joined()
-        let validCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_"
-        return String(camelCased.compactMap { validCharacters.contains($0) ? $0 : nil }.prefix(100))
+        let validCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+        let invalidRemoved = String(camelCased.compactMap { validCharacters.contains($0) ? $0 : nil })
+        let leadingFix = "0123456789".contains(invalidRemoved.first ?? Character("")) ?
+        String(invalidRemoved.dropFirst().first ?? Character("")).capitalized + invalidRemoved.dropFirst(2) : invalidRemoved
+        return String(leadingFix.prefix(100))
     }
 }
 
