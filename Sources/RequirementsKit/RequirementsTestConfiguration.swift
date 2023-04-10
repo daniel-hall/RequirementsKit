@@ -32,14 +32,14 @@ public protocol RequirementsTestConfigurationProtocol: _RequirementsTestConfigur
     var statementHandlers: [StatementHandler] { get }
     var matchLabels: LabelExpression? { get }
     var continueAfterFailure: Bool { get }
-    var timeout: TimeInterval { get }
+    var defaultStatementTimeout: TimeInterval { get }
 
     func setUp(for example: Requirement.Example)
 }
 
 public extension RequirementsTestConfigurationProtocol {
     var continueAfterFailure: Bool { false }
-    var timeout: TimeInterval { 180 }
+    var defaultStatementTimeout: TimeInterval { 180 }
 }
 
 @objc open class _RequirementsTestConfigurationBaseClass: NSObject {
@@ -70,7 +70,7 @@ public extension RequirementsTestConfigurationProtocol {
                         let block: @convention(block) () -> Void = {
                             let runner = RequirementTestRunner(file: file, requirement: requirement,  statementHandlers: fileConfig.statementHandlers, matchLabels: fileConfig.matchLabels)
                             let task: () -> Void = {
-                                runner.run(timeout: fileConfig.timeout, continueAfterFailure: fileConfig.continueAfterFailure, beforeEachExample: { fileConfig.setUp(for: $0) })
+                                runner.run(timeout: fileConfig.defaultStatementTimeout, continueAfterFailure: fileConfig.continueAfterFailure, beforeEachExample: { fileConfig.setUp(for: $0) })
                             }
                             if Thread.isMainThread { task() }
                             else { DispatchQueue.main.async(execute: task) }
