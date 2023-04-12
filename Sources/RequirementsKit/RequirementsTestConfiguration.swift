@@ -40,11 +40,29 @@ public protocol RequirementsTestConfigurationProtocol: _RequirementsTestConfigur
 public extension RequirementsTestConfigurationProtocol {
     var continueAfterFailure: Bool { false }
     var defaultStatementTimeout: TimeInterval { 180 }
+
+    func waitForExpectations(timeout: TimeInterval, handler: ((Error?) -> Void)?) {
+        proxy.waitForExpectations(timeout: timeout, handler: handler)
+    }
+
+    func wait(for expectations: [XCTestExpectation], timeout: TimeInterval) {
+        proxy.wait(for: expectations, timeout: timeout)
+    }
+
+    func wait(for expectations: [XCTestExpectation], timeout: TimeInterval, enforceOrder: Bool) {
+        proxy.wait(for: expectations, timeout: timeout, enforceOrder: enforceOrder)
+    }
+
+    func expectation(description: String) -> XCTestExpectation {
+        proxy.expectation(description: description)
+    }
 }
 
 @objc open class _RequirementsTestConfigurationBaseClass: NSObject {
 
     private static var hasRun = false
+
+    fileprivate var proxy = XCTestCase()
 
     required public override init() {
         guard !Self.hasRun else { return }
@@ -70,7 +88,10 @@ public extension RequirementsTestConfigurationProtocol {
                         let block: @convention(block) () -> Void = {
                             let runner = RequirementTestRunner(file: file, requirement: requirement,  statementHandlers: fileConfig.statementHandlers, matchLabels: fileConfig.matchLabels)
                             let task: () -> Void = {
-                                runner.run(timeout: fileConfig.defaultStatementTimeout, continueAfterFailure: fileConfig.continueAfterFailure, beforeEachExample: { fileConfig.setUp(for: $0) })
+                                runner.run(timeout: fileConfig.defaultStatementTimeout, continueAfterFailure: fileConfig.continueAfterFailure, beforeEachExample: {
+                                    fileConfig.proxy = .init()
+                                    fileConfig.setUp(for: $0)
+                                })
                             }
                             if Thread.isMainThread { task() }
                             else { DispatchQueue.main.async(execute: task) }
