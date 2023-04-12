@@ -84,7 +84,8 @@ public extension RequirementsTestConfigurationProtocol {
             filtered.forEach { file in
                 let name = (file.description ?? file.name).cleanedUp()
                 if let testCase = objc_allocateClassPair(XCTestCase.self, name, 0), let fileConfig = Self.init() as? RequirementsTestConfiguration {
-                    file.requirements.forEach { requirement in
+                    let filtered = file.requirements.filter { $0.examples.filter { config.matchLabels?.matches($0.labels) != false }.count > 0 }
+                    filtered.forEach { requirement in
                         let block: @convention(block) () -> Void = {
                             let runner = RequirementTestRunner(file: file, requirement: requirement,  statementHandlers: fileConfig.statementHandlers, matchLabels: fileConfig.matchLabels)
                             let task: () -> Void = {
