@@ -32,6 +32,7 @@ public protocol RequirementsTestConfigurationProtocol: _RequirementsTestConfigur
     var statementHandlers: [StatementHandler] { get }
     var matchLabels: LabelExpression? { get }
     var continueAfterFailure: Bool { get }
+    var shouldDisplayFailuresOnRequirement: Bool { get }
     var defaultStatementTimeout: TimeInterval { get }
 
     func setUp(for example: Requirement.Example)
@@ -40,6 +41,7 @@ public protocol RequirementsTestConfigurationProtocol: _RequirementsTestConfigur
 public extension RequirementsTestConfigurationProtocol {
     var continueAfterFailure: Bool { false }
     var defaultStatementTimeout: TimeInterval { 180 }
+    var shouldDisplayFailuresOnRequirement: Bool { true }
 
     func waitForExpectations(timeout: TimeInterval, handler: ((Error?) -> Void)?) {
         proxy.waitForExpectations(timeout: timeout, handler: handler)
@@ -58,6 +60,31 @@ public extension RequirementsTestConfigurationProtocol {
     }
 }
 
+fileprivate extension XCTestCase {
+
+    struct AssociationKeys {
+        static var testRunner: String = "testRunner"
+    }
+
+    var requirementTestRunner: RequirementTestRunner? {
+        get { objc_getAssociatedObject(self, &AssociationKeys.testRunner) as? RequirementTestRunner }
+        set { objc_setAssociatedObject(self, &AssociationKeys.testRunner, newValue, .OBJC_ASSOCIATION_RETAIN) }
+    }
+
+    @objc func modifiedRecord(_ issue: XCTIssue) {
+        if let runner = requirementTestRunner,
+           let line = runner.currentStatement?.line,
+           runner.shouldDisplayFailuresOnRequirement {
+            var issue = issue
+            let context = XCTSourceCodeContext(callStack: issue.sourceCodeContext.callStack, location: .init(fileURL: runner.file.url, lineNumber: line))
+            issue.sourceCodeContext = context
+            self.modifiedRecord(issue)
+        }
+        self.modifiedRecord(issue)
+    }
+
+}
+
 @objc open class _RequirementsTestConfigurationBaseClass: NSObject {
 
     private static var hasRun = false
@@ -67,6 +94,12 @@ public extension RequirementsTestConfigurationProtocol {
     required public override init() {
         guard !Self.hasRun else { return }
         Self.hasRun = true
+
+        if let report = class_getInstanceMethod(XCTestCase.self, #selector(XCTestCase.record(_:))),
+           let modifiedReport = class_getInstanceMethod(XCTestCase.self, #selector(XCTestCase.modifiedRecord(_:))) {
+            method_exchangeImplementations(report, modifiedReport)
+        }
+
         let bundle = Bundle(for: type(of: self))
         let enumerator = FileManager.default.enumerator(atPath: bundle.bundlePath)
         var recursiveURLs: [URL] = []
@@ -86,10 +119,18 @@ public extension RequirementsTestConfigurationProtocol {
                 if let testCase = objc_allocateClassPair(XCTestCase.self, name, 0), let fileConfig = Self.init() as? RequirementsTestConfiguration {
                     let filtered = file.requirements.filter { $0.examples.filter { config.matchLabels?.matches($0.labels) != false }.count > 0 }
                     filtered.forEach { requirement in
-                        let block: @convention(block) () -> Void = {
-                            let runner = RequirementTestRunner(file: file, requirement: requirement,  statementHandlers: fileConfig.statementHandlers, matchLabels: fileConfig.matchLabels)
+                        let block: @convention(block) (XCTestCase?) -> Void = {
+                            let runner = RequirementTestRunner(file: file,
+                                                               requirement: requirement,
+                                                               statementHandlers: fileConfig.statementHandlers,
+                                                               matchLabels: fileConfig.matchLabels)
+                            $0?.requirementTestRunner = runner
+                            $0?.continueAfterFailure = fileConfig.continueAfterFailure
                             let task: () -> Void = {
-                                runner.run(timeout: fileConfig.defaultStatementTimeout, continueAfterFailure: fileConfig.continueAfterFailure, beforeEachExample: {
+                                runner.run(timeout: fileConfig.defaultStatementTimeout,
+                                           continueAfterFailure: fileConfig.continueAfterFailure,
+                                           shouldDisplayErrorsOnRequirement: fileConfig.shouldDisplayFailuresOnRequirement,
+                                           beforeEachExample: {
                                     fileConfig.proxy = .init()
                                     fileConfig.setUp(for: $0)
                                 })

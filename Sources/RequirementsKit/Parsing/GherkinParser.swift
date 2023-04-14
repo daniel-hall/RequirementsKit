@@ -176,9 +176,9 @@ private let parseExampleDescription = Parser<String> {
     return description
 }
 
-private let parseStatementKeyword = Parser<(Requirement.Example.StatementType, String)> {
+private let parseStatementKeyword = Parser<(Requirement.Example.StatementType, String, Int)> { text, number in
     let type: Requirement.Example.StatementType
-    let trimmed = $0.trimmingCharacters(in: .whitespaces)
+    let trimmed = text.trimmingCharacters(in: .whitespaces)
     switch trimmed.prefix(upTo: trimmed.firstIndex(of: " ") ?? trimmed.startIndex) {
     case "Given":
         type = .if
@@ -193,13 +193,13 @@ private let parseStatementKeyword = Parser<(Requirement.Example.StatementType, S
     guard !description.isEmpty else {
         throw "A Statement must have a description after the Given, When or Then keyword"
     }
-    return (type, description)
+    return (type, description, number)
 }
 
 private let parseAndButOrListItem = parseOptionalComments
     .then(
-        Parser<String> {
-            let trimmed = $0.trimmingCharacters(in: .whitespaces)
+        Parser<(String, Int)> { text, number in
+            let trimmed = text.trimmingCharacters(in: .whitespaces)
             let description: String
             if trimmed.hasPrefix("*") {
                 description = trimmed.dropFirst().trimmingCharacters(in: .whitespaces)
@@ -213,7 +213,7 @@ private let parseAndButOrListItem = parseOptionalComments
             guard !description.isEmpty else {
                 throw "A Statement must have a description after the And, But or * keyword"
             }
-            return description
+            return (description, number)
         }
     )
     .then(parseOptionalData)
@@ -223,14 +223,14 @@ private let parseStatement = parseOptionalComments
     .then(parseStatementKeyword).then(parseOptionalData)
     .flattened()
     .map {
-        Requirement.Example.Statement(comments: $0, type: $1.0, description: $1.1, data: $2)
+        Requirement.Example.Statement(comments: $0, type: $1.0, description: $1.1, data: $2, line: $1.2)
     }
 
 private let parseEitherKindOfStatement = parseStatement
     .then(.oneOrMore(parseAndButOrListItem, until: .end.or(.not( parseAndButOrListItem))))
     .map { statement, items in
         return [statement] + items.map {
-            Requirement.Example.Statement(comments: $0.0, type: statement.type, description: $0.1, data: $0.2)
+            Requirement.Example.Statement(comments: $0.0, type: statement.type, description: $0.1.0, data: $0.2, line: $0.1.1)
         }
     }
     .or(parseStatement.map { [$0] })

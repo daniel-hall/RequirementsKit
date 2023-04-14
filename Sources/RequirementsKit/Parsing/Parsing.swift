@@ -76,6 +76,43 @@ struct Parser<T> {
         }
     }
 
+    @_disfavoredOverload
+    init(consumeLine: Bool = true, _ closure: @escaping (String, Int) throws -> T) {
+        self.closure = { lines in
+            lines = Array(lines.drop { $0.text.trimmingCharacters(in: .whitespaces).isEmpty })
+            guard let first = lines.first else {
+                throw ParsingError(line: 0, description: "Can't parse an empty array of lines")
+            }
+            do {
+                let result = try closure(first.text, first.number)
+                if consumeLine {
+                    lines = Array(lines.dropFirst())
+                }
+                return result
+            } catch {
+                throw ParsingError(line: first.number, description: error.localizedDescription)
+            }
+        }
+    }
+
+    init<U>(consumeLine: Bool = true, _ closure: @escaping (String, Int) throws -> T) where T == U? {
+        self.closure = { lines in
+            lines = Array(lines.drop { $0.text.trimmingCharacters(in: .whitespaces).isEmpty })
+            guard let first = lines.first else {
+                throw ParsingError(line: 0, description: "Can't parse an empty array of lines")
+            }
+            do {
+                let result = try closure(first.text, first.number)
+                if consumeLine && result != nil {
+                    lines = Array(lines.dropFirst())
+                }
+                return result
+            } catch {
+                throw ParsingError(line: first.number, description: error.localizedDescription)
+            }
+        }
+    }
+
     func callAsFunction(_ lines: inout [Line]) throws -> T {
         try closure(&lines)
     }
@@ -301,7 +338,7 @@ extension Requirement.Example.Statement {
     }
 
     func replacing(token: String, with value: String) -> Self {
-        return .init(comments: comments, type: type, description: description.replacingOccurrences(of: token, with: value), data: data?.replacing(token: token, with: value))
+        return .init(comments: comments, type: type, description: description.replacingOccurrences(of: token, with: value), data: data?.replacing(token: token, with: value), line: line)
     }
 }
 

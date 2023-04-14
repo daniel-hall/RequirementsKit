@@ -27,14 +27,16 @@ import XCTest
 
 
 class RequirementTestRunner: NSObject, XCTestObservation {
-    public var file: File
-    public var requirement: Requirement
-    public var hasFailed = false
-    public var continueAfterFailure = false
-    public let matchLabels: LabelExpression?
-    private let statementHandlers: [StatementHandler]
-    private var beforeEachExample: ((Requirement.Example) -> Void)?
-    private var timeoutDispatchWorkItem: DispatchWorkItem?
+    var file: File
+    var requirement: Requirement
+    var hasFailed = false
+    var continueAfterFailure = false
+    var currentStatement: Requirement.Example.Statement?
+    var shouldDisplayFailuresOnRequirement: Bool = true
+    let matchLabels: LabelExpression?
+    let statementHandlers: [StatementHandler]
+    var beforeEachExample: ((Requirement.Example) -> Void)?
+    var timeoutDispatchWorkItem: DispatchWorkItem?
 
     init(file: File, requirement: Requirement, statementHandlers: [StatementHandler], matchLabels: LabelExpression? = nil) {
         self.file = file
@@ -49,9 +51,10 @@ class RequirementTestRunner: NSObject, XCTestObservation {
         }
     }
 
-    func run(timeout: TimeInterval = 180, continueAfterFailure: Bool = false, beforeEachExample: ((Requirement.Example) -> Void)? = nil) {
+    func run(timeout: TimeInterval = 180, continueAfterFailure: Bool = false, shouldDisplayErrorsOnRequirement: Bool = true, beforeEachExample: ((Requirement.Example) -> Void)? = nil) {
         self.hasFailed = false
         self.continueAfterFailure = true
+        self.shouldDisplayFailuresOnRequirement = shouldDisplayErrorsOnRequirement
         self.beforeEachExample = beforeEachExample
 
         XCTestObservationCenter.shared.addTestObserver(self)
@@ -67,6 +70,7 @@ class RequirementTestRunner: NSObject, XCTestObservation {
                 self.beforeEachExample?(example)
                 for statement in example.statements {
                     guard !self.hasFailed || continueAfterFailure else { break }
+                    currentStatement = statement
                     XCTContext.runActivity(named: "❇️ " + statement.activity(syntax: file.syntax)) { _ in
                         let matches = self.statementHandlers.filter { $0.type == statement.type && $0.getMatch(statement) != nil }
                         if matches.isEmpty {

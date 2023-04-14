@@ -185,13 +185,24 @@ extension Requirement.Example {
         public let type: StatementType
         public let description: String
         public let data: Data?
+        public let line: Int?
 
-        public init(comments: [String]? = nil, type: Requirement.Example.StatementType, description: String, data: Requirement.Example.Statement.Data? = nil) {
+        public init(comments: [String]? = nil, type: Requirement.Example.StatementType, description: String, data: Requirement.Example.Statement.Data? = nil, line: Int? = nil) {
             self.comments = comments
             self.type = type
             self.description = description
             self.data = data
+            self.line = line
         }
+    }
+}
+
+extension Requirement.Example.Statement {
+    public static func ==(lhs: Requirement.Example.Statement, rhs: Requirement.Example.Statement) -> Bool {
+        return lhs.comments == rhs.comments
+        && lhs.type == rhs.type
+        && lhs.description == rhs.description
+        && lhs.data == rhs.data
     }
 }
 
