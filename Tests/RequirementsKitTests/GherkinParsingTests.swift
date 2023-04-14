@@ -23,7 +23,7 @@
 //  SOFTWARE.
 //
 
-import RequirementsKit
+@testable import RequirementsKit
 import XCTest
 
 
@@ -39,7 +39,7 @@ class GherkinParsingTests: XCTestCase {
                                   syntax: .gherkin,
                                   requirements: [
                 Requirement(comments: ["1.1"], identifier: nil, labels: ["labelOne", "labelTwo", "featureLabel"], description: "The user can log in with a valid username and password", examples: [
-                    .init(comments: ["1.1.1"], identifier: nil, labels: ["labelThree", "labelOne", "labelTwo", "featureLabel"], description: "Valid username and password", statements: [
+                    .init(comments: ["1.1.1"], identifier: nil, labels: ["labelThree", "labelOne", "labelTwo", "featureLabel"], explicitLabels: ["labelThree", "labelOne", "labelTwo"], description: "Valid username and password", statements: [
                         .init(comments: nil, type: .if, description: "the user is on the log in screen", data: nil),
                         .init(comments: nil, type: .if, description: "the user has entered a valid username and password", data: .keyValues([
                             "username": "Snaffle",
@@ -52,7 +52,7 @@ class GherkinParsingTests: XCTestCase {
                             "settingsButton"
                         ]))
                     ]),
-                    .init(comments: ["1.1.2"], identifier: nil, labels: ["labelFour", "labelOne", "labelTwo", "featureLabel"], description: "Valid username with invalid password", statements: [
+                    .init(comments: ["1.1.2"], identifier: nil, labels: ["labelFour", "labelOne", "labelTwo", "featureLabel"], explicitLabels: ["labelFour", "labelOne", "labelTwo"], description: "Valid username with invalid password", statements: [
                         .init(comments: nil, type: .if, description: "the user is on the log in screen", data: nil),
                         .init(comments: ["Less than 8 characters is invalid"], type: .if, description: "the user has entered an INVALID username and password", data: .keyValues([
                             "username": "Snaffle",
@@ -64,19 +64,19 @@ class GherkinParsingTests: XCTestCase {
                     ])
                 ]),
                 Requirement(comments: ["1.2"], identifier: nil, labels: ["labelFive", "labelSix", "featureLabel"], description: "The user can log out", examples: [
-                    .init(comments: ["1.2.1"], identifier: nil, labels: ["labelFive", "labelSix", "featureLabel"], description: nil, statements: [
+                    .init(comments: ["1.2.1"], identifier: nil, labels: ["labelFive", "labelSix", "featureLabel"], explicitLabels: ["labelFive", "labelSix"], description: nil, statements: [
                         .init(comments: nil, type: .if, description: "the user is on the home screen", data: nil),
                         .init(comments: nil, type: .when, description: "the user taps the log out button", data: nil),
                         .init(comments: nil, type: .expect, description: "the user should arrive on the login screen", data: nil),
                         .init(comments: nil, type: .expect, description: "the user should not be on the home screen", data: nil)
                     ]),
-                    .init(comments: ["1.2.2", "Account screen not supported on Android yet"], identifier: nil, labels: ["ios", "labelFive", "labelSix", "featureLabel"], description: nil, statements: [
+                    .init(comments: ["1.2.2", "Account screen not supported on Android yet"], identifier: nil, labels: ["ios", "labelFive", "labelSix", "featureLabel"], explicitLabels: ["ios", "labelFive", "labelSix"], description: nil, statements: [
                         .init(comments: nil, type: .if, description: "the user is on the account screen", data: nil),
                         .init(comments: nil, type: .when, description: "the user taps the log out button", data: nil),
                         .init(comments: nil, type: .expect, description: "the user should arrive on the login screen", data: nil),
                         .init(comments: nil, type: .expect, description: "the user should not be on the account screen", data: nil)
                     ]),
-                    .init(comments: ["1.2.3"], identifier: nil, labels: ["labelFive", "labelSix", "featureLabel"], description: nil, statements: [
+                    .init(comments: ["1.2.3"], identifier: nil, labels: ["labelFive", "labelSix", "featureLabel"], explicitLabels: ["labelFive", "labelSix"], description: nil, statements: [
                         .init(comments: nil, type: .if, description: "the user is on the settings screen", data: nil),
                         .init(comments: nil, type: .when, description: "the user taps the log out button", data: nil),
                         .init(comments: nil, type: .expect, description: "the user should arrive on the login screen", data: nil),
@@ -84,7 +84,7 @@ class GherkinParsingTests: XCTestCase {
                     ])
                 ]),
                 Requirement(comments: ["Notification Stuff", "1.3"], identifier: nil, labels: ["featureLabel"], description: "Welcome notifications display correctly", examples: [
-                    .init(comments: ["No premium subscription requirements defined yet", "1.3.1"], identifier: nil, labels: ["basic", "featureLabel"], description: "Basic subscription", statements: [
+                    .init(comments: ["No premium subscription requirements defined yet", "1.3.1"], identifier: nil, labels: ["basic", "featureLabel"], explicitLabels: ["basic"], description: "Basic subscription", statements: [
                         .init(comments: nil, type: .if, description: "the notification payloads are", data: .matrix([
                             "first": ["title": "Welcome", "body": "Thanks for subscribing, Pat!"],
                             "second": ["title": "Let's get started", "body": "Tap here to set up your preferences"]

@@ -3,7 +3,7 @@
 Feature: Auth and Notifications
 
 # 1.1
-@labelOne, @labelTwo
+@labelOne @labelTwo
 Rule: The user can log in with a valid username and password
 
     # 1.1.1
@@ -41,7 +41,7 @@ Rule: The user can log in with a valid username and password
           """
 
 # 1.2
-@labelFive, @labelSix
+@labelFive @labelSix
 Rule: The user can log out
 
   Scenario Outline: Logging out

@@ -158,9 +158,9 @@ private let parseExampleSetDescription = Parser<String> {
     return description
 }
 
-private let parseStatementKeyword = Parser<(Requirement.Example.StatementType, String)> {
+private let parseStatementKeyword = Parser<(Requirement.Example.StatementType, String, Int)> { text, number in
     let type: Requirement.Example.StatementType
-    let trimmed = $0.trimmingCharacters(in: .whitespaces)
+    let trimmed = text.trimmingCharacters(in: .whitespaces)
     switch trimmed.prefix(upTo: trimmed.firstIndex(of: ":") ?? trimmed.startIndex) {
     case "If": type = .if
         case "When": type = .when
@@ -168,12 +168,12 @@ private let parseStatementKeyword = Parser<(Requirement.Example.StatementType, S
             default: throw "No If, When, or Expect keyword found"
     }
     let description = trimmed.drop { $0 != ":" }.dropFirst().trimmingCharacters(in: .whitespaces)
-    return (type, description)
+    return (type, description, number)
 }
 
 private let parseListItem = parseOptionalComments.then(
-    Parser<String> {
-        let trimmed = $0.trimmingCharacters(in: .whitespaces)
+    Parser<(String, Int)> { text, number in
+        let trimmed = text.trimmingCharacters(in: .whitespaces)
         guard ["-", "*", "•"].contains(trimmed.first) else {
             throw "Not a statement list item because the line doesn't start with -, * or •"
         }
@@ -181,12 +181,12 @@ private let parseListItem = parseOptionalComments.then(
         guard !description.isEmpty else {
             throw "A statement list item must have a description and cannot be empty"
         }
-        return description
+        return (description, number)
     }
 ).then(parseOptionalData).flattened()
 
 private let parseStatement = parseOptionalComments.then(parseStatementKeyword).then(parseOptionalData).flattened().map {
-    Requirement.Example.Statement(comments: $0, type: $1.0, description: $1.1, data: $2)
+    Requirement.Example.Statement(comments: $0, type: $1.0, description: $1.1, data: $2, line: $1.2)
 }
 
 private let parseEitherKindOfStatement = parseStatement.map {
@@ -203,7 +203,7 @@ private let parseEitherKindOfStatement = parseStatement.map {
             throw "Can't have a Statement that contains both a description and a list. Remove any text after the \(statement.type.rawValue.capitalized): keyword"
         }
         return items.map {
-            Requirement.Example.Statement(comments: $0.0, type: statement.type, description: $0.1, data: $0.2)
+            Requirement.Example.Statement(comments: $0.0, type: statement.type, description: $0.1.0, data: $0.2, line: $0.1.1)
         }
     }
 )
