@@ -31,6 +31,7 @@ class RequirementTestRunner: NSObject, XCTestObservation {
     var requirement: Requirement
     var hasFailed = false
     var continueAfterFailure = false
+    var setupActive = false
     var currentStatement: Requirement.Example.Statement?
     var shouldDisplayFailuresOnRequirement: Bool = true
     let matchLabels: LabelExpression?
@@ -68,6 +69,30 @@ class RequirementTestRunner: NSObject, XCTestObservation {
             }
             XCTContext.runActivity(named: "💡 " + example.activity(syntax: file.syntax)) { _ in
                 self.beforeEachExample?(example)
+                let setups = statementHandlers.filter { $0.setup != nil }
+                setups.forEach { handler in
+                    if let match = example.statements.first(where: {
+                        $0.type == handler.type && handler.getMatch($0) != nil
+                    }) {
+                        currentStatement = match
+                        setupActive = true
+                        defer { setupActive = false }
+                        do {
+                            let timeoutWorkItem = DispatchWorkItem {
+                                XCTFail("Statement setup timed out after \(handler.timeout ?? timeout) seconds")
+                            }
+                            self.timeoutDispatchWorkItem?.cancel()
+                            self.timeoutDispatchWorkItem = timeoutWorkItem
+                            DispatchQueue.global().asyncAfter(deadline: .now() + (handler.timeout ?? timeout), execute: timeoutWorkItem)
+                            try handler.setup?(handler.getMatch(match))
+                        } catch {
+                            XCTFail(error.localizedDescription)
+                            if !continueAfterFailure {
+                                hasFailed = true
+                            }
+                        }
+                    }
+                }
                 for statement in example.statements {
                     guard !self.hasFailed || continueAfterFailure else { break }
                     currentStatement = statement
