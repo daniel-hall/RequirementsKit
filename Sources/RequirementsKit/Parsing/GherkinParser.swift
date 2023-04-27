@@ -41,7 +41,7 @@ private struct ExampleRow {
 public func parseGherkin(from url: URL) throws -> File {
     let data = try Data(contentsOf: url)
     guard let string = String(data: data, encoding: .ascii) else {
-        throw RequirementsKitError(errorDescription: "Couldn't decode text from file at url \(url)")
+        throw RequirementsKitError("Couldn't decode text from file at url \(url)")
     }
     var lines = string.split(separator: "\n", omittingEmptySubsequences: false).enumerated().map { Line(number: $0.offset + 1, text: String($0.element)) }
     let feature = try parseFeature(&lines)
@@ -96,7 +96,7 @@ private let parseRule = parseOptionalCommentsAndTags
 private let parseComment = Parser<String> {
     let trimmed = $0.trimmingCharacters(in: .whitespaces)
     guard trimmed.hasPrefix("#") else {
-        throw "Can't parse comment because line doesn't start with #"
+        throw RequirementsKitError("Can't parse comment because line doesn't start with #")
     }
     return trimmed.drop { $0 == "#" }.trimmingCharacters(in: .whitespaces)
 }
@@ -108,7 +108,7 @@ private let parseTags = Parser<[String]> {
     let trimmed = $0.trimmingCharacters(in: .whitespaces)
     let tags = trimmed.split(separator: " ").map { $0.trimmingCharacters(in: .whitespaces) }
     guard tags.reduce(true, { $0 && $1.first == "@" && !$1.dropFirst().trimmingCharacters(in: .whitespaces).isEmpty ? true : false }) else {
-        throw "Tags must all be prefixed with @"
+        throw RequirementsKitError("Tags must all be prefixed with @")
     }
     return tags.map { $0.dropFirst().trimmingCharacters(in: .whitespaces) }
 }
@@ -143,11 +143,11 @@ Parser.zeroOrMore(parseString, until: parseRuleDescription.map { _ in ()}
 private let parseFeatureDescription = Parser<String> {
     let trimmed = $0.trimmingCharacters(in: .whitespaces)
     guard trimmed.hasPrefix("Feature:") == true else {
-        throw "Line doesn't begin with \"Feature:\""
+        throw RequirementsKitError("Line doesn't begin with \"Feature:\"")
     }
     let description = trimmed.drop { $0 != ":" }.dropFirst().trimmingCharacters(in: .whitespaces)
     guard !description.isEmpty else {
-        throw "There must be a non-empty description of the Rule after the the \"Feature:\" keyword"
+        throw RequirementsKitError("There must be a non-empty description of the Rule after the the \"Feature:\" keyword")
     }
     return description
 }
@@ -155,11 +155,11 @@ private let parseFeatureDescription = Parser<String> {
 private let parseRuleDescription = Parser<String> {
     let trimmed = $0.trimmingCharacters(in: .whitespaces)
     guard trimmed.hasPrefix("Rule:") == true else {
-        throw "Line doesn't begin with \"Rule:\""
+        throw RequirementsKitError("Line doesn't begin with \"Rule:\"")
     }
     let description = trimmed.drop { $0 != ":" }.dropFirst().trimmingCharacters(in: .whitespaces)
     guard !description.isEmpty else {
-        throw "There must be a non-empty description of the Rule after the the \"Rule:\" keyword"
+        throw RequirementsKitError("There must be a non-empty description of the Rule after the the \"Rule:\" keyword")
     }
     return description
 }
@@ -167,11 +167,11 @@ private let parseRuleDescription = Parser<String> {
 private let parseExampleDescription = Parser<String> {
     let trimmed = $0.trimmingCharacters(in: .whitespaces)
     guard trimmed.hasPrefix("Example:") == true || trimmed.hasPrefix("Scenario:") == true else {
-        throw "Line doesn't begin with \"Example:\" or \"Scenario:\""
+        throw RequirementsKitError("Line doesn't begin with \"Example:\" or \"Scenario:\"")
     }
     let description = trimmed.drop { $0 != ":" }.dropFirst().trimmingCharacters(in: .whitespaces)
     guard !description.isEmpty else {
-        throw "There must be a non-empty description after the the \"Example:\" or \"Scenario:\" keyword"
+        throw RequirementsKitError("There must be a non-empty description after the the \"Example:\" or \"Scenario:\" keyword")
     }
     return description
 }
@@ -187,11 +187,11 @@ private let parseStatementKeyword = Parser<(Requirement.Example.StatementType, S
     case "Then":
         type = .expect
     default:
-        throw "No Given, When, or Then keyword found"
+        throw RequirementsKitError("No Given, When, or Then keyword found")
     }
     let description = trimmed.drop { $0 != " " }.dropFirst().trimmingCharacters(in: .whitespaces)
     guard !description.isEmpty else {
-        throw "A Statement must have a description after the Given, When or Then keyword"
+        throw RequirementsKitError("A Statement must have a description after the Given, When or Then keyword")
     }
     return (type, description, number)
 }
@@ -208,10 +208,10 @@ private let parseAndButOrListItem = parseOptionalComments
             } else if trimmed.hasPrefix("But") {
                 description = trimmed.dropFirst(3).trimmingCharacters(in: .whitespaces)
             } else {
-                throw "Not a Statement that starts with And, But, or *"
+                throw RequirementsKitError("Not a Statement that starts with And, But, or *")
             }
             guard !description.isEmpty else {
-                throw "A Statement must have a description after the And, But or * keyword"
+                throw RequirementsKitError("A Statement must have a description after the And, But or * keyword")
             }
             return (description, number)
         }
@@ -245,7 +245,7 @@ private let parseExample = parseOptionalCommentsAndTags
     .flattened()
     .map { commentsAndTags, description, statements in
         guard !statements.isEmpty else {
-            throw "An Example must contain one or more Statements"
+            throw RequirementsKitError("An Example must contain one or more Statements")
         }
         return Requirement.Example(comments: commentsAndTags?.comments, identifier: nil, labels: commentsAndTags?.tags, description: description, statements: statements)
     }
@@ -253,11 +253,11 @@ private let parseExample = parseOptionalCommentsAndTags
 private let parseScenarioOutlineDescription = Parser<String> {
     let trimmed = $0.trimmingCharacters(in: .whitespaces)
     guard trimmed.hasPrefix("Scenario Outline:") == true || trimmed.hasPrefix("Scenario Template:") == true else {
-        throw "Line doesn't begin with \"Scenario Outline:\" or \"Scenario Template:\""
+        throw RequirementsKitError("Line doesn't begin with \"Scenario Outline:\" or \"Scenario Template:\"")
     }
     let description = trimmed.drop { $0 != ":" }.dropFirst().trimmingCharacters(in: .whitespaces)
     guard !description.isEmpty else {
-        throw "There must be a non-empty description after the the \"Scenario Outline:\" or \"Scenario Template:\" keyword"
+        throw RequirementsKitError("There must be a non-empty description after the the \"Scenario Outline:\" or \"Scenario Template:\" keyword")
     }
     return description
 }
@@ -269,7 +269,7 @@ let parseScenarioOutline = parseOptionalCommentsAndTags
     .flattened()
     .map { commentsAndTags, description, statements in
         guard !statements.isEmpty else {
-            throw "A Scenario Outline / Scenario Template must contain one or more Statements"
+            throw RequirementsKitError("A Scenario Outline / Scenario Template must contain one or more Statements")
         }
         return Requirement.Example(comments: commentsAndTags?.comments, identifier: nil, labels: commentsAndTags?.tags, description: description, statements: statements)
     }
@@ -277,10 +277,10 @@ let parseScenarioOutline = parseOptionalCommentsAndTags
 private let parseExamplesOrScenariosKeyword = Parser<Void> {
     let trimmed = $0.trimmingCharacters(in: .whitespaces)
     guard trimmed.hasPrefix("Examples:") || trimmed.hasPrefix("Scenarios:") else {
-        throw "No Examples: or Scenarios: keyword found"
+        throw RequirementsKitError("No Examples: or Scenarios: keyword found")
     }
     guard trimmed.replacingOccurrences(of: "Examples:", with: "").isEmpty || trimmed.replacingOccurrences(of: "Scenarios:", with: "").isEmpty else {
-        throw "The Examples: or Scenarios: keyword should not have any description after it and should be on a line by itself"
+        throw RequirementsKitError("The Examples: or Scenarios: keyword should not have any description after it and should be on a line by itself")
     }
     return ()
 }
@@ -294,20 +294,20 @@ private let parseExampleTemplate: Parser<[Requirement.Example]> = parseScenarioO
     .then(.oneOrMore(parseExampleRow, until: .end.or(.not(parseExampleRow))))
     .map { example, examples in
         guard !example.tokens.isEmpty else {
-            throw "There are no template tokens present in the Example template"
+            throw RequirementsKitError("There are no template tokens present in the Example template")
         }
         guard examples.count >= 2 else {
-            throw "Examples should be a table containing at least 2 rows: a headers row and at least one row of values"
+            throw RequirementsKitError("Examples should be a table containing at least 2 rows: a headers row and at least one row of values")
         }
         let headers = examples.first!
         guard headers.comments == nil, headers.tags == nil else {
-            throw "The Examples / Scenarios header row can't have comments or tags"
+            throw RequirementsKitError("The Examples / Scenarios header row can't have comments or tags")
         }
         guard examples.reduce(true, { $0 && $1.values.count == headers.values.count }) else {
-            throw "Every row in the Examples table must have the same number of colums"
+            throw RequirementsKitError("Every row in the Examples table must have the same number of colums")
         }
         guard Set(example.tokens.map { $0.trimmingCharacters(in: .init(charactersIn: "<>")) }) == Set(headers.values.drop { $0.isEmpty }) else {
-            throw "Every unique template variable must have exactly one matching column in the Examples table"
+            throw RequirementsKitError("Every unique template variable must have exactly one matching column in the Examples table")
         }
         return examples.dropFirst().map {
             var description: String?
@@ -329,7 +329,7 @@ private let parseExamples: Parser<[Requirement.Example]> = Parser<[[Requirement.
 ).map {
     let joined = Array($0.joined())
     guard !joined.isEmpty else {
-        throw "No Examples were parsed"
+        throw RequirementsKitError("No Examples were parsed")
     }
     return joined
 }
@@ -354,7 +354,7 @@ private let parseString = Parser<String> {
 
 private let parseTextDelimiter = Parser<Void> {
     guard $0.trimmingCharacters(in: .whitespaces) == "\"\"\"" else {
-        throw "Text data must start and end with the \"\"\" delimiter on a single line of its own"
+        throw RequirementsKitError("Text data must start and end with the \"\"\" delimiter on a single line of its own")
     }
     return ()
 }
@@ -362,12 +362,12 @@ private let parseTextDelimiter = Parser<Void> {
 private let parseKeyValueData = Parser.oneOrMore(parseTableRow, until: .end.or(.not(parseTableRow)))
     .map {
         guard $0.reduce(true, { $1.count == 1 && $0 ? true : false }) else {
-            throw "Key Value Data must be formatted as a single column table"
+            throw RequirementsKitError("Key Value Data must be formatted as a single column table")
         }
         return try Requirement.Example.Statement.Data.keyValues(OrderedDictionary($0.map {
             let keyValue = $0.first!.split(separator: ":").map { $0.trimmingCharacters(in: .whitespaces) }
             guard keyValue.count == 2 else {
-                throw "Each row in Key Value data must have the format '| key: value |'"
+                throw RequirementsKitError("Each row in Key Value data must have the format '| key: value |'")
             }
             return (keyValue[0], keyValue[1])
         }, uniquingKeysWith: { $1 }))
@@ -376,7 +376,7 @@ private let parseKeyValueData = Parser.oneOrMore(parseTableRow, until: .end.or(.
 private let parseListData = Parser.oneOrMore(parseTableRow, until: .end.or(.not(parseTableRow)))
     .map {
         guard $0.reduce(true, { $1.count == 1 && $0 ? true : false }) else {
-            throw "List Data must be formatted as a single column table"
+            throw RequirementsKitError("List Data must be formatted as a single column table")
         }
         return Requirement.Example.Statement.Data.list($0.map { $0.first!.trimmingCharacters(in: .whitespaces) })
     }
@@ -385,10 +385,10 @@ private let parseTableData = Parser.oneOrMore(parseTableRow, until: .end.or(.not
     .map {
         let columns = $0.first!
         guard columns.count >= 1 && $0.count >= 2 else {
-            throw "Table Data must have at least one column and at least three rows"
+            throw RequirementsKitError("Table Data must have at least one column and at least three rows")
         }
         guard $0.reduce(true, { $1.count == columns.count && $0 ? true : false  }) else {
-            throw "All rows must have the same number of columns for valid Table Data"
+            throw RequirementsKitError("All rows must have the same number of columns for valid Table Data")
         }
         return Requirement.Example.Statement.Data.table($0.dropFirst().map { row in
             return OrderedDictionary(uniqueKeysWithValues: columns.enumerated().map { ($0.element, row[$0.offset]) })
@@ -399,13 +399,13 @@ private let parseMatrixData = Parser.oneOrMore(parseTableRow, until: .end.or(.no
     .map {
         let columns = $0.first!
         guard columns.count >= 2 && $0.count >= 3 else {
-            throw "Matrix Data must have at least two columns and at least three rows"
+            throw RequirementsKitError("Matrix Data must have at least two columns and at least three rows")
         }
         guard $0.reduce(true, { $1.count == columns.count && $0 ? true : false  }) else {
-            throw "All rows must have the same number of columns for valid Matrix Data"
+            throw RequirementsKitError("All rows must have the same number of columns for valid Matrix Data")
         }
         guard columns.first?.trimmingCharacters(in: .whitespaces).isEmpty == true else {
-            throw "The first column header of Matrix Data should be empty"
+            throw RequirementsKitError("The first column header of Matrix Data should be empty")
         }
         
         return Requirement.Example.Statement.Data.matrix(OrderedDictionary(uniqueKeysWithValues: $0.dropFirst().map { row in
@@ -418,11 +418,11 @@ private let parseMatrixData = Parser.oneOrMore(parseTableRow, until: .end.or(.no
 private let parseTableRow = Parser<[String]> {
     let trimmed = $0.trimmingCharacters(in: .whitespaces)
     guard trimmed.first == "|" && trimmed.last == "|" else {
-        throw "Table rows must be contained inside pipe | characters"
+        throw RequirementsKitError("Table rows must be contained inside pipe | characters")
     }
     let array = trimmed.trimmingCharacters(in: ["|"]).split(separator: "|").map({ $0.trimmingCharacters(in: .whitespaces) })
     guard !array.isEmpty else {
-        throw "Line is not a table row because it doesn't contain data in between | characters"
+        throw RequirementsKitError("Line is not a table row because it doesn't contain data in between | characters")
     }
     return array
 }

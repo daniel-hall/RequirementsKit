@@ -52,7 +52,7 @@ public struct File: Equatable {
         switch fileExtension {
         case "feature": return try parseGherkin(from: url)
         case "requirements": return try parseReqsML(from: url)
-        default: throw RequirementsKitError(errorDescription: "Requirements files must have the extension .feature (for Gherkin) or .requirements (for ReqsML)")
+        default: throw RequirementsKitError("Requirements files must have the extension .feature (for Gherkin) or .requirements (for ReqsML)")
         }
     }
 }
@@ -259,4 +259,7 @@ extension Requirement.Example.Statement {
 
 struct RequirementsKitError: LocalizedError {
     let errorDescription: String?
+    init(_ description: String) {
+        self.errorDescription = description
+    }
 }

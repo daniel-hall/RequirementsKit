@@ -46,7 +46,7 @@ private struct ExampleRow {
 func parseReqsML(from url: URL) throws -> File {
     let data = try Data(contentsOf: url)
     guard let string = String(data: data, encoding: .ascii) else {
-        throw RequirementsKitError(errorDescription: "Couldn't decode text from file at url \(url)")
+        throw RequirementsKitError("Couldn't decode text from file at url \(url)")
     }
     var lines = string.split(separator: "\n", omittingEmptySubsequences: false).enumerated().map { Line(number: $0.offset + 1, text: String($0.element)) }
     return File(url: url, comments: nil, labels: nil, description: nil, syntax: .reqsML, requirements: try Parser.oneOrMore(parseRequirement, until: .end)(&lines))
@@ -54,7 +54,7 @@ func parseReqsML(from url: URL) throws -> File {
 
 private let parseRequirement = parseOptionalCommentsAndMetadata.then(parseRequirementDescription).then(parseSingleExample).flattened().map { commentsAndMetadata, description, example in
     guard example.description?.tokens.isEmpty != false && example.statements.reduce(Set<String>(), { $0.union($1.tokens) }).isEmpty else {
-        throw "A single example requirement shouldn't have template tokens without an Examples: table"
+        throw RequirementsKitError("A single example requirement shouldn't have template tokens without an Examples: table")
     }
     let combinedLabels = commentsAndMetadata?.metadata?.labels.combinedWith(example.labels) ?? example.labels
     let example = Requirement.Example(comments: example.comments, identifier: example.identifier, labels: combinedLabels, explicitLabels: example.labels, description: example.description, statements: example.statements)
@@ -82,7 +82,7 @@ private let parseRequirement = parseOptionalCommentsAndMetadata.then(parseRequir
 private let parseComment = Parser<String> {
     let trimmed = $0.trimmingCharacters(in: .whitespaces)
     guard trimmed.hasPrefix("//") else {
-        throw "Can't parse comment because line doesn't start with //"
+        throw RequirementsKitError("Can't parse comment because line doesn't start with //")
     }
     return trimmed.drop { $0 == "/" }.trimmingCharacters(in: .whitespaces)
 }
@@ -92,22 +92,22 @@ private let parseOptionalComments: Parser<[String]?> = Parser.zeroOrMore(parseCo
 private let parseMetadata = Parser<Metadata> {
     let trimmed = $0.trimmingCharacters(in: .whitespaces)
     guard trimmed.first == "#" else {
-        throw "Identifier or labels must be preceded by #"
+        throw RequirementsKitError("Identifier or labels must be preceded by #")
     }
     let identifier = trimmed.dropFirst().prefix { $0 != "(" }.trimmingCharacters(in: .whitespaces)
     let labelString = trimmed.dropFirst().drop { $0 != "(" }.trimmingCharacters(in: .whitespaces)
     if labelString.isEmpty && identifier.isEmpty {
-        throw "Can't have a # that isn't followed by either an identifier, labels in parentheses, or both"
+        throw RequirementsKitError("Can't have a # that isn't followed by either an identifier, labels in parentheses, or both")
     }
     if labelString.isEmpty {
         return Metadata(identifier: identifier, labels: nil)
     }
     guard labelString.last == ")" else {
-        throw "Missing closing parenthesis on labels"
+        throw RequirementsKitError("Missing closing parenthesis on labels")
     }
     let labels = labelString.dropFirst().dropLast().trimmingCharacters(in: .whitespaces).split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
     guard labels.first?.isEmpty == false else {
-        throw "There must be at least one label specified inside parentheses ()"
+        throw RequirementsKitError("There must be at least one label specified inside parentheses ()")
     }
     return Metadata(identifier: identifier.isEmpty ? nil : identifier, labels: labels)
 }
@@ -125,11 +125,11 @@ parseOptionalComments.then(parseOptionalMetadata).map {
 private let parseRequirementDescription = Parser<String> {
     let trimmed = $0.trimmingCharacters(in: .whitespaces)
     guard trimmed.hasPrefix("Requirement:") == true else {
-        throw "Line doesn't begin with \"Requirement:\""
+        throw RequirementsKitError("Line doesn't begin with \"Requirement:\"")
     }
     let description = trimmed.drop { $0 != ":" }.dropFirst().trimmingCharacters(in: .whitespaces)
     guard !description.isEmpty else {
-        throw "There must be a non-empty description of the Requirement after the the \"Requirement:\" keyword"
+        throw RequirementsKitError("There must be a non-empty description of the Requirement after the the \"Requirement:\" keyword")
     }
     return description
 }
@@ -137,11 +137,11 @@ private let parseRequirementDescription = Parser<String> {
 private let parseExampleDescription = Parser<String> {
     let trimmed = $0.trimmingCharacters(in: .whitespaces)
     guard trimmed.hasPrefix("Example:") == true else {
-        throw "Line doesn't begin with \"Example:\""
+        throw RequirementsKitError("Line doesn't begin with \"Example:\"")
     }
     let description = trimmed.drop { $0 != ":" }.dropFirst().trimmingCharacters(in: .whitespaces)
     guard !description.isEmpty else {
-        throw "There must be a non-empty description of the Example after the the \"Example:\" keyword"
+        throw RequirementsKitError("There must be a non-empty description of the Example after the the \"Example:\" keyword")
     }
     return description
 }
@@ -149,11 +149,11 @@ private let parseExampleDescription = Parser<String> {
 private let parseExampleSetDescription = Parser<String> {
     let trimmed = $0.trimmingCharacters(in: .whitespaces)
     guard trimmed.hasPrefix("ExampleSet:") == true || trimmed.hasPrefix("Example Set:") == true else {
-        throw "Line doesn't begin with \"ExampleSet:\" or \"Example Set:\""
+        throw RequirementsKitError("Line doesn't begin with \"ExampleSet:\" or \"Example Set:\"")
     }
     let description = trimmed.drop { $0 != ":" }.dropFirst().trimmingCharacters(in: .whitespaces)
     guard !description.isEmpty else {
-        throw "There must be a non-empty description of the Example Set after the the \"ExampleSet:\" or \"Example Set:\" keyword"
+        throw RequirementsKitError("There must be a non-empty description of the Example Set after the the \"ExampleSet:\" or \"Example Set:\" keyword")
     }
     return description
 }
@@ -165,7 +165,7 @@ private let parseStatementKeyword = Parser<(Requirement.Example.StatementType, S
     case "If": type = .if
         case "When": type = .when
             case "Expect": type = .expect
-            default: throw "No If, When, or Expect keyword found"
+            default: throw RequirementsKitError("No If, When, or Expect keyword found")
     }
     let description = trimmed.drop { $0 != ":" }.dropFirst().trimmingCharacters(in: .whitespaces)
     return (type, description, number)
@@ -175,11 +175,11 @@ private let parseListItem = parseOptionalComments.then(
     Parser<(String, Int)> { text, number in
         let trimmed = text.trimmingCharacters(in: .whitespaces)
         guard ["-", "*", "•"].contains(trimmed.first) else {
-            throw "Not a statement list item because the line doesn't start with -, * or •"
+            throw RequirementsKitError("Not a statement list item because the line doesn't start with -, * or •")
         }
         let description = trimmed.dropFirst().trimmingCharacters(in: .whitespaces)
         guard !description.isEmpty else {
-            throw "A statement list item must have a description and cannot be empty"
+            throw RequirementsKitError("A statement list item must have a description and cannot be empty")
         }
         return (description, number)
     }
@@ -191,16 +191,16 @@ private let parseStatement = parseOptionalComments.then(parseStatementKeyword).t
 
 private let parseEitherKindOfStatement = parseStatement.map {
     guard !$0.description.isEmpty else {
-        throw "A Statement must have a description following the If:, When:, or Expect:"
+        throw RequirementsKitError("A Statement must have a description following the If:, When:, or Expect:")
     }
     return [$0]
 }.or (
     parseStatement.then(.oneOrMore(parseListItem, until: .end.or(.not(parseListItem)) ) ).map { statement, items in
         guard statement.comments == nil else {
-            throw "Comments for a statement list must be placed above each list item, not above the statement keyword"
+            throw RequirementsKitError("Comments for a statement list must be placed above each list item, not above the statement keyword")
         }
         guard statement.description.isEmpty else {
-            throw "Can't have a Statement that contains both a description and a list. Remove any text after the \(statement.type.rawValue.capitalized): keyword"
+            throw RequirementsKitError("Can't have a Statement that contains both a description and a list. Remove any text after the \(statement.type.rawValue.capitalized): keyword")
         }
         return items.map {
             Requirement.Example.Statement(comments: $0.0, type: statement.type, description: $0.1.0, data: $0.2, line: $0.1.1)
@@ -212,14 +212,14 @@ private let parseStatements = Parser.oneOrMore(parseEitherKindOfStatement, until
 
 private let parseExample = parseOptionalCommentsAndMetadata.then(parseExampleDescription).then(parseStatements ).flattened().map { commentsAndMetadata, description, statements in
     guard !statements.isEmpty else {
-        throw "An Example must contain one or more Statements"
+        throw RequirementsKitError("An Example must contain one or more Statements")
     }
     return Requirement.Example(comments: commentsAndMetadata?.comments, identifier: commentsAndMetadata?.metadata?.identifier, labels: commentsAndMetadata?.metadata?.labels, description: description, statements: statements)
 }
 
 private let parseSingleExample = parseOptionalCommentsAndMetadata.then(parseStatements).map {
     guard $0 == nil else {
-        throw "When a Requirement has a single in-line Example that Example can't include separate comments, labels or identifiers"
+        throw RequirementsKitError("When a Requirement has a single in-line Example that Example can't include separate comments, labels or identifiers")
     }
     return Requirement.Example(comments: nil, identifier: nil, labels: nil, description: nil, statements: $1)
 }
@@ -227,10 +227,10 @@ private let parseSingleExample = parseOptionalCommentsAndMetadata.then(parseStat
 private let parseExamplesKeyword = Parser<Void> {
     let trimmed = $0.trimmingCharacters(in: .whitespaces)
     guard trimmed.hasPrefix("Examples:") else {
-        throw "No Examples: keyword found"
+        throw RequirementsKitError("No Examples: keyword found")
     }
     guard trimmed.replacingOccurrences(of: "Examples:", with: "").isEmpty else {
-        throw "The Examples: keyword should not have any description after it and should be on a line by itself"
+        throw RequirementsKitError("The Examples: keyword should not have any description after it and should be on a line by itself")
     }
     return ()
 }
@@ -242,23 +242,23 @@ private let parseExampleRowWithoutComments =  Parser<ExampleRow> {
 HandlePrefix:
     if !prefix.isEmpty {
         guard prefix.first == "#" else {
-            throw "Examples can only contain a valid identifier and/or labels before the table, e.g. '#identifier (labelOne, labelTwo) | some value | another value |'"
+            throw RequirementsKitError("Examples can only contain a valid identifier and/or labels before the table, e.g. '#identifier (labelOne, labelTwo) | some value | another value |'")
         }
         let identifier = prefix.dropFirst().prefix { $0 != "(" }.trimmingCharacters(in: .whitespaces)
         let labelString = prefix.dropFirst().drop { $0 != "(" }.trimmingCharacters(in: .whitespaces)
         if labelString.isEmpty && identifier.isEmpty {
-            throw "Can't have a # that isn't followed by either an identifier, labels in parentheses, or both"
+            throw RequirementsKitError("Can't have a # that isn't followed by either an identifier, labels in parentheses, or both")
         }
         if labelString.isEmpty {
             metadata = .init(identifier: identifier, labels: nil)
             break HandlePrefix
         }
         guard labelString.last == ")" else {
-            throw "Missing closing parenthesis on labels"
+            throw RequirementsKitError("Missing closing parenthesis on labels")
         }
         let labels = labelString.dropFirst().dropLast().trimmingCharacters(in: .whitespaces).split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
         guard labels.first?.isEmpty == false else {
-            throw "There must be at least one label specified inside parentheses ()"
+            throw RequirementsKitError("There must be at least one label specified inside parentheses ()")
         }
         metadata = .init(identifier: identifier.isEmpty ? nil : identifier, labels: labels)
         break HandlePrefix
@@ -267,11 +267,11 @@ HandlePrefix:
     }
     let row = trimmed.drop { $0 != "|" }
     guard row.first == "|" && row.last == "|" else {
-        throw "Examples rows must be in table format inside pipe | characters"
+        throw RequirementsKitError("Examples rows must be in table format inside pipe | characters")
     }
     let array = row.trimmingCharacters(in: ["|"]).split(separator: "|").map({ $0.trimmingCharacters(in: .whitespaces) })
     guard !array.isEmpty else {
-        throw "Line is not an Examples row because it doesn't contain data in between | characters"
+        throw RequirementsKitError("Line is not an Examples row because it doesn't contain data in between | characters")
     }
     return ExampleRow(comments: nil, metadata: metadata, values: array)
 }
@@ -285,40 +285,40 @@ private let parseExampleSet = parseOptionalCommentsAndMetadata.then(parseExample
     let exampleSet = Requirement.Example._ExampleSet(comments: commentsAndMetadata?.comments, identifier:  commentsAndMetadata?.metadata?.identifier, labels: commentsAndMetadata?.metadata?.labels, description: description, statements: statements)
 
     guard statements.reduce(false, { ($0 || !$1.tokens.isEmpty) ? true : false }) else {
-        throw "There are no tokens present in the Example Set statements"
+        throw RequirementsKitError("There are no tokens present in the Example Set statements")
     }
     guard exampleRows.count >= 3 else {
-        throw "Examples should be a table containing at least 3 rows: a headers row, a separator row, and at least one row of values"
+        throw RequirementsKitError("Examples should be a table containing at least 3 rows: a headers row, a separator row, and at least one row of values")
     }
     let headers = exampleRows.first!
     if headers.values.count == 1, headers.values.first!.isEmpty {
-        throw "Examples table can't have a single column with no header value"
+        throw RequirementsKitError("Examples table can't have a single column with no header value")
     }
     guard headers.values.dropFirst().reduce(true, { !$1.isEmpty && $0 == true ? true : false }) else {
-        throw "Only the first column of an Examples table can have an empty header, which signifies that the column will be used for each Example's description"
+        throw RequirementsKitError("Only the first column of an Examples table can have an empty header, which signifies that the column will be used for each Example's description")
     }
     if headers.values.first!.isEmpty {
         guard exampleRows.dropFirst(2).reduce(true, { !$1.values.first!.trimmingCharacters(in: .whitespaces).isEmpty && $0 == true ? true : false }) else {
-            throw "If the Examples table includes a first column containing descriptions, there must be a non-empty description provided for each row"
+            throw RequirementsKitError("If the Examples table includes a first column containing descriptions, there must be a non-empty description provided for each row")
         }
     }
     let separators = exampleRows.dropFirst().first!
     guard headers.comments == nil && headers.metadata == nil else {
-        throw "The Examples header row can't have comments, identifiers or labels"
+        throw RequirementsKitError("The Examples header row can't have comments, identifiers or labels")
     }
     guard separators.values.reduce(true, {
         let array = $1.trimmingCharacters(in: .whitespaces).split(separator: "-", omittingEmptySubsequences: false)
         return array.count >= 4 && array.joined().isEmpty
     }) else {
-        throw "Examples must start with a header row, followed by a row with '----' (three or more hyphens) for each column"
+        throw RequirementsKitError("Examples must start with a header row, followed by a row with '----' (three or more hyphens) for each column")
     }
 
     guard exampleRows.reduce(true, { $0 && $1.values.count == headers.values.count }) else {
-        throw "Every row in the Examples table must have the same number of colums"
+        throw RequirementsKitError("Every row in the Examples table must have the same number of colums")
     }
 
     guard Set(exampleSet.tokens.map { $0.trimmingCharacters(in: .init(charactersIn: "<>")) }) == Set(headers.values.drop { $0.isEmpty }) else {
-        throw "Every unique token must have exactly one matching column in the Examples table"
+        throw RequirementsKitError("Every unique token must have exactly one matching column in the Examples table")
     }
 
     return exampleRows.dropFirst(2).map {
@@ -344,38 +344,38 @@ private let parseExampleRows = Parser.oneOrMore(parseExampleRow, until: .end.or(
 
 private let parseExampleTemplate = parseSingleExample.then(parseExamplesKeyword).then(parseExampleRows).map { example, examples in
     guard !example.tokens.isEmpty else {
-        throw "There are no tokens present in the Example Set"
+        throw RequirementsKitError("There are no tokens present in the Example Set")
     }
     guard examples.count >= 3 else {
-        throw "Examples should be a table containing at least 3 rows: a headers row, a separator row, and at least one row of values"
+        throw RequirementsKitError("Examples should be a table containing at least 3 rows: a headers row, a separator row, and at least one row of values")
     }
     let headers = examples.first!
     if headers.values.count == 1, headers.values.first!.isEmpty {
-        throw "Examples table can't have a single column with no header value"
+        throw RequirementsKitError("Examples table can't have a single column with no header value")
     }
     guard headers.values.dropFirst().reduce(true, { !$1.isEmpty && $0 == true ? true : false }) else {
-        throw "Only the first column of an Examples table can have an empty header, which signifies that the column will be used for each Example's description"
+        throw RequirementsKitError("Only the first column of an Examples table can have an empty header, which signifies that the column will be used for each Example's description")
     }
     if headers.values.first!.isEmpty {
         guard examples.dropFirst(2).reduce(true, { !$1.values.first!.trimmingCharacters(in: .whitespaces).isEmpty && $0 == true ? true : false }) else {
-            throw "If the Examples table includes a first column containing descriptions, there must be a non-empty description provided for each row"
+            throw RequirementsKitError("If the Examples table includes a first column containing descriptions, there must be a non-empty description provided for each row")
         }
     }
     let separators = examples.dropFirst().first!
     guard headers.comments == nil && headers.metadata == nil else {
-        throw "The Examples header row can't have comments, identifiers or labels"
+        throw RequirementsKitError("The Examples header row can't have comments, identifiers or labels")
     }
     guard separators.values.reduce(true, {
         let array = $1.trimmingCharacters(in: .whitespaces).split(separator: "-", omittingEmptySubsequences: false)
         return array.count >= 4 && array.joined().isEmpty
     }) else {
-        throw "Examples must start with a header row, followed by a row with '----' (three or more hyphens) for each column"
+        throw RequirementsKitError("Examples must start with a header row, followed by a row with '----' (three or more hyphens) for each column")
     }
     guard examples.reduce(true, { $0 && $1.values.count == headers.values.count }) else {
-        throw "Every row in the Examples table must have the same number of colums"
+        throw RequirementsKitError("Every row in the Examples table must have the same number of colums")
     }
     guard Set(example.tokens.map { $0.trimmingCharacters(in: .init(charactersIn: "<>")) }) == Set(headers.values.drop { $0.isEmpty }) else {
-        throw "Every unique template variable must have exactly one matching column in the Examples table"
+        throw RequirementsKitError("Every unique template variable must have exactly one matching column in the Examples table")
     }
 
     let exampleSet = Requirement.Example._ExampleSet(comments: nil, identifier: nil, labels: nil, description: nil, statements: example.statements)
@@ -415,19 +415,19 @@ private let parseString = Parser<String> {
 
 private let parseTextDelimiter = Parser<Void> {
     guard $0.trimmingCharacters(in: .whitespaces) == "```" else {
-        throw "Text data must start and end with the ``` delimiter on a single line of its own"
+        throw RequirementsKitError("Text data must start and end with the ``` delimiter on a single line of its own")
     }
     return ()
 }
 
 private let parseKeyValueData = Parser.oneOrMore(parseTableRow, until: .end.or(.not(parseTableRow))).map {
     guard $0.reduce(true, { $1.count == 1 && $0 ? true : false }) else {
-        throw "Key Value Data must be formatted as a single column table"
+        throw RequirementsKitError("Key Value Data must be formatted as a single column table")
     }
     return try Requirement.Example.Statement.Data.keyValues(OrderedDictionary($0.map {
         let keyValue = $0.first!.split(separator: ":").map { $0.trimmingCharacters(in: .whitespaces) }
         guard keyValue.count == 2 else {
-            throw "Each row in Key Value data must have the format '| key: value |'"
+            throw RequirementsKitError("Each row in Key Value data must have the format '| key: value |'")
         }
         return (keyValue[0], keyValue[1])
     }, uniquingKeysWith: { $1 }))
@@ -435,7 +435,7 @@ private let parseKeyValueData = Parser.oneOrMore(parseTableRow, until: .end.or(.
 
 private let parseListData = Parser.oneOrMore(parseTableRow, until: .end.or(.not(parseTableRow))).map {
     guard $0.reduce(true, { $1.count == 1 && $0 ? true : false }) else {
-        throw "List Data must be formatted as a single column table"
+        throw RequirementsKitError("List Data must be formatted as a single column table")
     }
     return Requirement.Example.Statement.Data.list($0.map { $0.first!.trimmingCharacters(in: .whitespaces) })
 }
@@ -443,16 +443,16 @@ private let parseListData = Parser.oneOrMore(parseTableRow, until: .end.or(.not(
 private let parseTableData = Parser.oneOrMore(parseTableRow, until: .end.or(.not(parseTableRow))).map {
     let columns = $0.first!
     guard columns.count >= 1 && $0.count >= 3 else {
-        throw "Table Data must have at least one column and at least three rows"
+        throw RequirementsKitError("Table Data must have at least one column and at least three rows")
     }
     guard $0.dropFirst().first!.reduce(true, {
         let array = $1.trimmingCharacters(in: .whitespaces).split(separator: "-", omittingEmptySubsequences: false)
         return array.count >= 4 && array.joined().isEmpty
     }) else {
-        throw "Table Data must start with a header row, followed by a row with '----' (three or more hyphens) for each column"
+        throw RequirementsKitError("Table Data must start with a header row, followed by a row with '----' (three or more hyphens) for each column")
     }
     guard $0.reduce(true, { $1.count == columns.count && $0 ? true : false  }) else {
-        throw "All rows must have the same number of columns for valid Table Data"
+        throw RequirementsKitError("All rows must have the same number of columns for valid Table Data")
     }
     return Requirement.Example.Statement.Data.table($0.dropFirst(2).map { row in
         return OrderedDictionary(uniqueKeysWithValues: columns.enumerated().map { ($0.element, row[$0.offset]) })
@@ -462,19 +462,19 @@ private let parseTableData = Parser.oneOrMore(parseTableRow, until: .end.or(.not
 private let parseMatrixData = Parser.oneOrMore(parseTableRow, until: .end.or(.not(parseTableRow))).map {
     let columns = $0.first!
     guard columns.count >= 2 && $0.count >= 3 else {
-        throw "Matrix Data must have at least two columns and at least three rows"
+        throw RequirementsKitError("Matrix Data must have at least two columns and at least three rows")
     }
     guard $0.dropFirst().first!.reduce(true, {
         let array = $1.trimmingCharacters(in: .whitespaces).split(separator: "-", omittingEmptySubsequences: false)
         return array.count >= 4 && array.joined().isEmpty
     }) else {
-        throw "Matrix Data must start with a header row, followed by a row with '----' (three or more hyphens) for each column"
+        throw RequirementsKitError("Matrix Data must start with a header row, followed by a row with '----' (three or more hyphens) for each column")
     }
     guard $0.reduce(true, { $1.count == columns.count && $0 ? true : false  }) else {
-        throw "All rows must have the same number of columns for valid Matrix Data"
+        throw RequirementsKitError("All rows must have the same number of columns for valid Matrix Data")
     }
     guard columns.first?.trimmingCharacters(in: .whitespaces).isEmpty == true else {
-        throw "The first column header of Matrix Data should be empty"
+        throw RequirementsKitError("The first column header of Matrix Data should be empty")
     }
 
     return Requirement.Example.Statement.Data.matrix(OrderedDictionary(uniqueKeysWithValues: $0.dropFirst(2).map { row in
@@ -487,11 +487,11 @@ private let parseMatrixData = Parser.oneOrMore(parseTableRow, until: .end.or(.no
 private let parseTableRow = Parser<[String]> {
     let trimmed = $0.trimmingCharacters(in: .whitespaces)
     guard trimmed.first == "|" && trimmed.last == "|" else {
-        throw "Table rows must be contained inside pipe | characters"
+        throw RequirementsKitError("Table rows must be contained inside pipe | characters")
     }
     let array = trimmed.trimmingCharacters(in: ["|"]).split(separator: "|").map({ $0.trimmingCharacters(in: .whitespaces) })
     guard !array.isEmpty else {
-        throw "Line is not a table row because it doesn't contain data in between | characters"
+        throw RequirementsKitError("Line is not a table row because it doesn't contain data in between | characters")
     }
     return array
 }
