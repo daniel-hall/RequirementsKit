@@ -213,9 +213,49 @@ extension Requirement.Example.Statement {
         case list([String])
         case table([OrderedDictionary<String, String>])
         case matrix(OrderedDictionary<String, OrderedDictionary<String, String>>)
+
+        public var text: String? {
+            if case .text(let data) = self { return data }
+            return nil
+        }
+
+        public var keyValues: Dictionary<String, String>? {
+            if case .keyValues(let data) = self {
+                return Dictionary(uniqueKeysWithValues: data.map {
+                    ($0.key, $0.value)
+                })
+            }
+            return nil
+        }
+
+        public var list: [String]? {
+            if case .list(let data) = self { return data }
+            return nil
+        }
+
+        public var table: [Dictionary<String, String>]? {
+            if case .table(let data) = self {
+                return data.map {
+                    Dictionary(uniqueKeysWithValues: $0.map {
+                        ($0.key, $0.value)
+                    })
+                }
+            }
+            return nil
+        }
+
+        public var matrix: Dictionary<String, Dictionary<String, String>>? {
+            if case .matrix(let data) = self {
+                return Dictionary(uniqueKeysWithValues: data.map {
+                    ($0.key, Dictionary(uniqueKeysWithValues: $0.value.map {
+                        ($0.key, $0.value)
+                    }))
+                })
+            }
+            return nil
+        }
     }
 }
-
 
 struct RequirementsKitError: LocalizedError {
     let errorDescription: String?
