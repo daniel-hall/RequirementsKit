@@ -201,7 +201,7 @@ extension Parser where T == Void  {
         .init { lines in
             lines = Array(lines.drop { $0.text.trimmingCharacters(in: .whitespaces).isEmpty })
             guard lines.isEmpty else {
-                throw "Expected end of file but there are still lines remaining"
+                throw RequirementsKitError("Expected end of file but there are still lines remaining")
             }
             return ()
         }
@@ -306,10 +306,6 @@ private struct AnyParser {
 struct ParsingError: Error {
     let line: Int
     let description: String
-}
-
-extension String: LocalizedError {
-    public var errorDescription: String? { self }
 }
 
 extension Requirement.Example._ExampleSet {
