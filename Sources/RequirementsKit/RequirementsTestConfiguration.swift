@@ -78,6 +78,10 @@ fileprivate extension XCTestCase {
             var issue = issue
             let context = XCTSourceCodeContext(callStack: issue.sourceCodeContext.callStack, location: .init(fileURL: runner.file.url, lineNumber: line))
             issue.sourceCodeContext = context
+            if runner.setupActive {
+                issue.compactDescription = "Failure in setup closure: " + issue.compactDescription
+                issue.detailedDescription = issue.detailedDescription.map { "Failure in setup closure: " + $0 }
+            }
             self.modifiedRecord(issue)
         }
         self.modifiedRecord(issue)
