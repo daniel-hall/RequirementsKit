@@ -62,6 +62,9 @@ public struct StatementHandler {
 }
 
 public extension StatementHandler {
+
+    // MARK: - if -
+
     static func `if`<T>(_ statement: Regex<T>, timeout: TimeInterval? = nil, handler: @escaping (Input<T>) throws -> Void) -> StatementHandler {
         .init(statementType: .if, statement: statement, timeout: timeout, handler: handler, setup: nil)
     }
@@ -71,6 +74,9 @@ public extension StatementHandler {
     static func `if`(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping () throws -> Void) -> StatementHandler {
         .init(statementType: .if, statement: statement, timeout: timeout, handler: { _ in try handler() }, setup: nil)
     }
+
+    // MARK: - given -
+
     static func given<T>(_ statement: Regex<T>, timeout: TimeInterval? = nil, handler: @escaping (Input<T>) throws -> Void) -> StatementHandler {
         .if(statement, timeout: timeout, handler: handler)
     }
@@ -80,8 +86,35 @@ public extension StatementHandler {
     static func given(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping () throws -> Void) -> StatementHandler {
         .init(statementType: .if, statement: statement, timeout: timeout, handler: { _ in try handler() }, setup: nil)
     }
+
+    // MARK: - when -
+
+    static func when<T>(_ statement: Regex<T>, timeout: TimeInterval? = nil, handler: @escaping (Input<T>) throws -> Void, setup: @escaping (Input<T>) throws -> Void) -> StatementHandler {
+        .init(statementType: .when, statement: statement, timeout: timeout, handler: handler, setup: setup)
+    }
+    static func when<T>(_ statement: Regex<T>, timeout: TimeInterval? = nil, handler: @escaping (Input<T>) throws -> Void, setup: @escaping () throws -> Void) -> StatementHandler {
+        .init(statementType: .when, statement: statement, timeout: timeout, handler: handler, setup: { _ in try setup() })
+    }
+    static func when<T>(_ statement: Regex<T>, timeout: TimeInterval? = nil, handler: @escaping () throws -> Void, setup: @escaping (Input<T>) throws -> Void) -> StatementHandler {
+        .init(statementType: .when, statement: statement, timeout: timeout, handler: { _ in try handler() }, setup: setup)
+    }
+    static func when<T>(_ statement: Regex<T>, timeout: TimeInterval? = nil, handler: @escaping () throws -> Void, setup: @escaping () throws -> Void) -> StatementHandler {
+        .init(statementType: .when, statement: statement, timeout: timeout, handler: { _ in try handler() }, setup: { _ in try setup() })
+    }
     static func when<T>(_ statement: Regex<T>, timeout: TimeInterval? = nil, handler: @escaping (Input<T>) throws -> Void) -> StatementHandler {
         .init(statementType: .when, statement: statement, timeout: timeout, handler: handler, setup: nil)
+    }
+    static func when(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping (Input<AnyRegexOutput>) throws -> Void, setup: @escaping (Input<AnyRegexOutput>) throws -> Void) -> StatementHandler {
+        .init(statementType: .when, statement: statement, timeout: timeout, handler: handler, setup: setup)
+    }
+    static func when(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping (Input<AnyRegexOutput>) throws -> Void, setup: @escaping () throws -> Void) -> StatementHandler {
+        .init(statementType: .when, statement: statement, timeout: timeout, handler: handler, setup: { _ in try setup() })
+    }
+    static func when(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping () throws -> Void, setup: @escaping (Input<AnyRegexOutput>) throws -> Void) -> StatementHandler {
+        .init(statementType: .when, statement: statement, timeout: timeout, handler: { _ in try handler() }, setup: setup)
+    }
+    static func when(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping () throws -> Void, setup: @escaping () throws -> Void) -> StatementHandler {
+        .init(statementType: .when, statement: statement, timeout: timeout, handler: { _ in try handler() }, setup: { _ in try setup() })
     }
     static func when(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping (Input<AnyRegexOutput>) throws -> Void) -> StatementHandler {
         .init(statementType: .when, statement: statement, timeout: timeout, handler: handler, setup: nil)
@@ -89,9 +122,9 @@ public extension StatementHandler {
     static func when(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping () throws -> Void) -> StatementHandler {
         .init(statementType: .when, statement: statement, timeout: timeout, handler: { _ in try handler() }, setup: nil)
     }
-    static func expect<T>(_ statement: Regex<T>, timeout: TimeInterval? = nil, handler: @escaping (Input<T>) throws -> Void) -> StatementHandler {
-        .init(statementType: .expect, statement: statement, timeout: timeout, handler: handler, setup: nil)
-    }
+
+    // MARK: - expect -
+
     static func expect<T>(_ statement: Regex<T>, timeout: TimeInterval? = nil, handler: @escaping (Input<T>) throws -> Void, setup: @escaping (Input<T>) throws -> Void) -> StatementHandler {
         .init(statementType: .expect, statement: statement, timeout: timeout, handler: handler, setup: setup)
     }
@@ -104,21 +137,30 @@ public extension StatementHandler {
     static func expect<T>(_ statement: Regex<T>, timeout: TimeInterval? = nil, handler: @escaping () throws -> Void, setup: @escaping () throws -> Void) -> StatementHandler {
         .init(statementType: .expect, statement: statement, timeout: timeout, handler: { _ in try handler() }, setup: { _ in try setup() })
     }
-    static func expect<T>(_ statement: Regex<T>, timeout: TimeInterval? = nil, handler: @escaping () throws -> Void) -> StatementHandler {
-        .init(statementType: .expect, statement: statement, timeout: timeout, handler: { _ in try handler() }, setup: nil)
+    static func expect<T>(_ statement: Regex<T>, timeout: TimeInterval? = nil, handler: @escaping (Input<T>) throws -> Void) -> StatementHandler {
+        .init(statementType: .expect, statement: statement, timeout: timeout, handler: handler, setup: nil)
     }
-    static func expect(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping (Input<AnyRegexOutput>) throws -> Void, setup: ((Input<AnyRegexOutput>) throws -> Void)? = nil) -> StatementHandler {
+    static func expect(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping (Input<AnyRegexOutput>) throws -> Void, setup: @escaping (Input<AnyRegexOutput>) throws -> Void) -> StatementHandler {
         .init(statementType: .expect, statement: statement, timeout: timeout, handler: handler, setup: setup)
     }
-    static func expect(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping () throws -> Void, setup: ((Input<AnyRegexOutput>) throws -> Void)? = nil) -> StatementHandler {
+    static func expect(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping () throws -> Void, setup: @escaping (Input<AnyRegexOutput>) throws -> Void) -> StatementHandler {
         .init(statementType: .expect, statement: statement, timeout: timeout, handler: {_ in try handler() }, setup: setup)
     }
-    static func expect(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping (Input<AnyRegexOutput>) throws -> Void, setup: (() throws -> Void)? = nil) -> StatementHandler {
-        .init(statementType: .expect, statement: statement, timeout: timeout, handler: handler, setup: { _ in try setup?() })
+    static func expect(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping (Input<AnyRegexOutput>) throws -> Void, setup: @escaping () throws -> Void) -> StatementHandler {
+        .init(statementType: .expect, statement: statement, timeout: timeout, handler: handler, setup: { _ in try setup() })
     }
-    static func expect(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping () throws -> Void, setup: (() throws -> Void)? = nil) -> StatementHandler {
-        .init(statementType: .expect, statement: statement, timeout: timeout, handler: { _ in try handler() }, setup: { _ in try setup?() })
+    static func expect(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping () throws -> Void, setup: @escaping () throws -> Void) -> StatementHandler {
+        .init(statementType: .expect, statement: statement, timeout: timeout, handler: { _ in try handler() }, setup: { _ in try setup() })
     }
+    static func expect(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping (Input<AnyRegexOutput>) throws -> Void) -> StatementHandler {
+        .init(statementType: .expect, statement: statement, timeout: timeout, handler: handler, setup: nil)
+    }
+    static func expect(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping () throws -> Void) -> StatementHandler {
+        .init(statementType: .expect, statement: statement, timeout: timeout, handler: { _ in try handler() }, setup: nil)
+    }
+
+    // MARK: - then -
+
     static func then<T>(_ statement: Regex<T>, timeout: TimeInterval? = nil, handler: @escaping (Input<T>) throws -> Void, setup: @escaping (Input<T>) throws -> Void) -> StatementHandler {
         .expect(statement, timeout: timeout, handler: handler, setup: setup)
     }
@@ -143,13 +185,12 @@ public extension StatementHandler {
     static func then(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping (Input<AnyRegexOutput>) throws -> Void, setup: @escaping () throws -> Void) -> StatementHandler {
         .init(statementType: .expect, statement: statement, timeout: timeout, handler: handler, setup: { _ in try setup() })
     }
-    static func then(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping (Input<AnyRegexOutput>) throws -> Void) -> StatementHandler {
-        .init(statementType: .expect, statement: statement, timeout: timeout, handler: handler, setup: nil)
-    }
     static func then(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping () throws -> Void, setup: @escaping () throws -> Void) -> StatementHandler {
         .init(statementType: .expect, statement: statement, timeout: timeout, handler: { _ in try handler() }, setup: { _ in try setup() })
     }
-
+    static func then(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping (Input<AnyRegexOutput>) throws -> Void) -> StatementHandler {
+        .init(statementType: .expect, statement: statement, timeout: timeout, handler: handler, setup: nil)
+    }
     static func then(_ statement: String..., timeout: TimeInterval? = nil, handler: @escaping () throws -> Void) -> StatementHandler {
         .init(statementType: .expect, statement: statement, timeout: timeout, handler: { _ in try handler() }, setup: nil)
     }
